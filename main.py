@@ -1,3 +1,7 @@
+from widgets import (w98_frame, w98_button, w98_title_bar, w98_label,
+                     w98_separator, w98_labelframe, w98_text_area,
+                     w98_treeview, w98_scrolled_listbox)
+from theme import W98
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 import pandas as pd
@@ -13,139 +17,6 @@ from sklearn.metrics import (
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
-
-
-# paleta kolorów
-W98 = {
-    'bg': '#c0c0c0', 'bg_dark': '#808080', 'bg_light': '#ffffff',
-    'title_bg': '#000080', 'title_fg': '#ffffff',
-    'btn_bg': '#c0c0c0', 'btn_active': '#c0c0c0',
-    'text': '#000000', 'disabled': '#808080', 'highlight': '#000080',
-    'console_bg': '#000000', 'console_fg': '#c0c0c0',
-    'select_bg': '#000080', 'select_fg':  '#ffffff',
-    'font': ('Microsoft Sans Serif', 8), 'font_mono': ('Courier New', 8),
-    'font_bold': ('Microsoft Sans Serif', 8, 'bold'),
-    'font_title': ('Microsoft Sans Serif', 10, 'bold'),
-}
-
-
-# STYLE konkretnych elementów
-STYLES = {
-    'frame':   {'bg': W98['bg']},
-    'button':  {'bg': W98['btn_bg'], 'fg': W98['text'], 'font': W98['font'],
-                'relief': tk.RAISED, 'bd': 2,
-                'activebackground': W98['btn_active'],
-                'activeforeground': W98['text'], 'cursor': 'arrow'},
-    'entry':   {'bg': W98['bg_light'], 'fg': W98['text'], 'font': W98['font'],
-                'relief': tk.SUNKEN, 'bd': 2, 'insertbackground': W98['text']},
-    'listbox': {'bg': W98['bg_light'], 'fg': W98['text'],
-                'font': W98['font_mono'], 'relief': tk.SUNKEN, 'bd': 2,
-                'selectbackground': W98['select_bg'],
-                'selectforeground': W98['select_fg']},
-    'text':    {'bg': W98['bg_light'], 'fg': W98['text'], 'font': W98['font'],
-                'relief': tk.FLAT, 'insertbackground': W98['text']}
-}
-
-
-# funkcje tworzące podstawowe części UI
-def w98_frame(parent, **kw):  # ramka
-    return tk.Frame(parent, **{**STYLES['frame'], **kw})
-
-
-def w98_label(parent, text, bold=False, **kw):  # etykieta
-    style = {'bg': W98['bg'], 'fg': W98['text'],
-             'font': W98['font_bold'] if bold else W98['font']}
-    return tk.Label(parent, text=text, **{**style, **kw})
-
-
-def w98_button(parent, text, command, **kw):  # przycisk
-    return tk.Button(parent, text=text, command=command,
-                     **{**STYLES['button'], **kw})
-
-
-def w98_entry(parent, **kw):  # pole tekstowe
-    return tk.Entry(parent, **{**STYLES['entry'], **kw})
-
-
-def w98_listbox(parent, **kw):  # lista
-    return tk.Listbox(parent, **{**STYLES['listbox'], **kw})
-
-
-def w98_scrollbar(parent, **kw):  # pasek przewijania
-    return tk.Scrollbar(parent, **kw)
-
-
-# funkcje tworzące bardziej skomplikowane części UI
-def w98_labelframe(parent, text, **kw):  # ramka z nagłówkiem
-    outer = w98_frame(parent, **kw)
-    w98_label(outer, text=f" {text} ", bold=True).pack(anchor=tk.W, padx=4)
-    inner = w98_frame(outer, relief=tk.GROOVE, bd=2)
-    inner.pack(fill=tk.BOTH, expand=True, padx=4, pady=(0, 4))
-    return outer, inner
-
-
-def w98_title_bar(parent, title):  # pasek tytułu
-    bar = tk.Frame(parent, bg=W98['title_bg'], height=20)
-    bar.pack(fill=tk.X)
-    bar.pack_propagate(False)
-    tk.Label(bar, text=f"{title}", bg=W98['title_bg'], fg=W98['title_fg'],
-             font=W98['font_bold'], anchor=tk.W).pack(side=tk.LEFT, fill=tk.Y)
-    return bar
-
-
-def w98_separator(parent):  # poziomy separator
-    tk.Frame(parent, bg=W98['bg_dark'], height=1).pack(fill=tk.X, pady=2)
-    tk.Frame(parent, bg='white', height=1).pack(fill=tk.X)
-
-
-def w98_text_area(parent, height=5, mono=False, **kw):  # pole tekstowe z przew
-    frame = w98_frame(parent, relief=tk.SUNKEN, bd=2)
-    sb = w98_scrollbar(frame)
-    sb.pack(side=tk.RIGHT, fill=tk.Y)
-
-    local_params = {
-        'height': height,
-        'yscrollcommand': sb.set
-    }
-    if mono:
-        local_params['font'] = W98['font_mono']
-    final_opts = {**STYLES['text'], **local_params, **kw}
-
-    txt = tk.Text(frame, **final_opts)
-    txt.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
-    sb.config(command=txt.yview)
-
-    return frame, txt
-
-
-def w98_treeview(parent, height=10, **kw):  # tabela treeview
-    frame = w98_frame(parent)
-    tree = ttk.Treeview(frame, style="W98.Treeview", height=height, **kw)
-
-    sy = ttk.Scrollbar(frame, orient=tk.VERTICAL, command=tree.yview,
-                       style="W98.Vertical.TScrollbar")
-    sx = ttk.Scrollbar(frame, orient=tk.HORIZONTAL, command=tree.xview,
-                       style="W98.Horizontal.TScrollbar")
-
-    tree.configure(yscrollcommand=sy.set, xscrollcommand=sx.set)
-
-    sy.pack(side=tk.RIGHT, fill=tk.Y)
-    sx.pack(side=tk.BOTTOM, fill=tk.X)
-    tree.pack(fill=tk.BOTH, expand=True)
-
-    return frame, tree
-
-
-def w98_scrolled_listbox(parent, **kw):
-    frame = w98_frame(parent, relief=tk.SUNKEN, bd=2)
-    sb = w98_scrollbar(frame)
-    sb.pack(side=tk.RIGHT, fill=tk.Y)
-    
-    lb = w98_listbox(frame, yscrollcommand=sb.set, **kw)
-    lb.pack(fill=tk.BOTH, expand=True)
-    sb.config(command=lb.yview)
-    
-    return frame, lb
 
 
 class W98Notebook:
@@ -378,7 +249,7 @@ class MLProjectGUI:
         _, self.class_chart_frame = (
                                     w98_labelframe(parent,
                                                    "Rozkład klas (cel" +
-                                                   "klasyfikacji)")
+                                                   " klasyfikacji)")
         )
         self.class_chart_frame.master.pack(fill=tk.BOTH, expand=True,
                                            padx=8, pady=4)
@@ -484,13 +355,13 @@ class MLProjectGUI:
             ("Wnioski (na podstawie obserwacji):",      "wn_text"),
             ("Wnioski końcowe do projektu:",            "end_text"),
         ]
-        
+
         for caption, attr in sections:
             w98_label(right, caption, bold=True).pack(anchor=tk.W, pady=(6, 1))
-            
+
             f, txt = w98_text_area(right, height=5, wrap=tk.WORD)
             f.pack(fill=tk.BOTH, expand=True)
-            
+
             setattr(self, attr, txt)
 
     def log(self, message):
