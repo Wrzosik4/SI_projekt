@@ -124,17 +124,17 @@ class W98Notebook:
             padx=6, pady=2
         )
         btn.pack(side=tk.LEFT, padx=(2 if idx == 0 else 0, 0), pady=(4, 0))
-        self.tabs.append((text, frame, btn))
+        self.tabs.append((text, frame, btn))  # dodaje zakładkę do listy
         if idx == 0:
             frame.pack(fill=tk.BOTH, expand=True)
         return frame
-
 
     def select(self, idx):
         if 0 <= idx < len(self.tabs):
             _, old_frame, old_btn = self.tabs[self.current]
             old_frame.pack_forget()
             old_btn.config(bg=W98['bg_dark'], relief=tk.FLAT)
+
             self.current = idx
             _, new_frame, new_btn = self.tabs[idx]
             new_frame.pack(fill=tk.BOTH, expand=True)
@@ -144,6 +144,7 @@ class W98Notebook:
         return self.tabs[idx][1]
 
 
+#   Główna klasa projektu
 class MLProjectGUI:
     def __init__(self, root):
         self.root = root
