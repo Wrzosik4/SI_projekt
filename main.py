@@ -15,7 +15,7 @@ import matplotlib.gridspec as gridspec
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 
-# kolory
+# paleta kolorów
 W98 = {
     'bg': '#c0c0c0', 'bg_dark': '#808080', 'bg_light': '#ffffff',
     'title_bg': '#000080', 'title_fg': '#ffffff',
@@ -29,57 +29,51 @@ W98 = {
 }
 
 
+# STYLE konkretnych elementów
+STYLES = {
+    'frame':   {'bg': W98['bg']},
+    'button':  {'bg': W98['btn_bg'], 'fg': W98['text'], 'font': W98['font'],
+                'relief': tk.RAISED, 'bd': 2,
+                'activebackground': W98['btn_active'],
+                'activeforeground': W98['text'], 'cursor': 'arrow'},
+    'entry':   {'bg': W98['bg_light'], 'fg': W98['text'], 'font': W98['font'],
+                'relief': tk.SUNKEN, 'bd': 2, 'insertbackground': W98['text']},
+    'listbox': {'bg': W98['bg_light'], 'fg': W98['text'],
+                'font': W98['font_mono'], 'relief': tk.SUNKEN, 'bd': 2,
+                'selectbackground': W98['select_bg'],
+                'selectforeground': W98['select_fg']}
+}
+
+
 # funkcje tworzące części UI
 def w98_frame(parent, **kw):  # ramka
-    return tk.Frame(parent, bg=W98['bg'], **kw)
+    return tk.Frame(parent, **{**STYLES['frame'], **kw})
 
 
 def w98_label(parent, text, bold=False, **kw):  # etykieta
-    font = W98['font_bold'] if bold else W98['font']
-    return tk.Label(parent, text=text, bg=W98['bg'], fg=W98['text'],
-                    font=font, **kw)
+    style = {'bg': W98['bg'], 'fg': W98['text'],
+             'font': W98['font_bold'] if bold else W98['font']}
+    return tk.Label(parent, text=text, **{**style, **kw})
 
 
-def w98_button(parent, text, command, width=None, **kw): # funkcja tworząca przycisk
-    btn = tk.Button(
-        parent, text=text, command=command,
-        bg=W98['btn_bg'], fg=W98['text'],
-        font=W98['font'],
-        relief=tk.RAISED, bd=2,
-        activebackground=W98['btn_active'],
-        activeforeground=W98['text'],
-        cursor='arrow',
-        **({} if width is None else {'width': width}),
-        **kw
-    )
-    return btn
+def w98_button(parent, text, command, **kw):  # przycisk
+    return tk.Button(parent, text=text, command=command,
+                     **{**STYLES['button'], **kw})
 
 
-def w98_entry(parent, textvariable=None, width=10, **kw): # funkcja tworząca pole tekstowe
-    return tk.Entry(
-        parent, bg=W98['bg_light'], fg=W98['text'],
-        font=W98['font'], relief=tk.SUNKEN, bd=2,
-        insertbackground=W98['text'],
-        textvariable=textvariable, width=width, **kw
-    )
+def w98_entry(parent, **kw):  # pole tekstowe
+    return tk.Entry(parent, **{**STYLES['entry'], **kw})
 
 
-def w98_listbox(parent, **kw): # funkcja tworząca listę
-    return tk.Listbox(
-        parent, bg=W98['bg_light'], fg=W98['text'],
-        font=W98['font_mono'],
-        selectbackground=W98['select_bg'],
-        selectforeground=W98['select_fg'],
-        relief=tk.SUNKEN, bd=2,
-        **kw
-    )
+def w98_listbox(parent, **kw):  # lista
+    return tk.Listbox(parent, **{**STYLES['listbox'], **kw})
 
 
-def w98_scrollbar(parent, **kw): # funkcja tworząca pasek przewijania
+def w98_scrollbar(parent, **kw):  # pasek przewijania
     return tk.Scrollbar(parent, **kw)
 
 
-def w98_labelframe(parent, text, **kw): # funkcja tworząca ramkę z nagłówkiem
+def w98_labelframe(parent, text, **kw):  # ramka z nagłówkiem
     outer = tk.Frame(parent, bg=W98['bg'], **kw)
     tk.Label(outer, text=f" {text} ", bg=W98['bg'], fg=W98['text'],
              font=W98['font_bold']).pack(anchor=tk.W, padx=4)
@@ -88,7 +82,7 @@ def w98_labelframe(parent, text, **kw): # funkcja tworząca ramkę z nagłówkie
     return outer, inner
 
 
-def w98_title_bar(parent, title, icon="🖥"): # funkcja tworząca pasek tytułu
+def w98_title_bar(parent, title, icon="🖥"):  # pasek tytułu
     bar = tk.Frame(parent, bg=W98['title_bg'], height=20)
     bar.pack(fill=tk.X)
     bar.pack_propagate(False)
@@ -97,7 +91,7 @@ def w98_title_bar(parent, title, icon="🖥"): # funkcja tworząca pasek tytułu
     return bar
 
 
-def w98_separator(parent): # funkcja tworząca poziomy separator
+def w98_separator(parent): # poziomy separator
     tk.Frame(parent, bg=W98['bg_dark'], height=1).pack(fill=tk.X, pady=2)
     tk.Frame(parent, bg='white', height=1).pack(fill=tk.X)
 
