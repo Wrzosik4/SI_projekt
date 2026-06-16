@@ -1,5 +1,5 @@
-from widgets import (w98_frame, w98_button, w98_title_bar, w98_label,
-                     w98_separator, w98_labelframe, w98_text_area,
+from widgets import (w98_frame, w98_entry, w98_button, w98_title_bar,
+                     w98_label, w98_separator, w98_labelframe, w98_text_area,
                      w98_treeview, w98_scrolled_listbox)
 from theme import W98
 import tkinter as tk
@@ -136,12 +136,12 @@ class MLProjectGUI:
         right = w98_frame(main)
         right.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-        # notebook
-        self.notebook = W98Notebook(right)
-
         # log na dole
         log_outer, log_inner = w98_labelframe(right, "Konsola / Log")
-        log_outer.pack(fill=tk.X, pady=(4, 0))
+        log_outer.pack(side=tk.BOTTOM, fill=tk.X, pady=(4, 0))
+
+        # notebook
+        self.notebook = W98Notebook(right)
 
         # tekst konsoli
         txt_frame, self.console = w98_text_area(
@@ -376,14 +376,16 @@ class MLProjectGUI:
     # ═══════════════════════════════════════════════════════════════════════
 
     def load_data(self):
-        filepath = filedialog.askopenfilename(filetypes=[("CSV Files", "*.csv")])
+        filepath = filedialog.askopenfilename(filetypes=[("CSV Files",
+                                                          "*.csv")])
         if not filepath:
             return
         self.set_status(f"Wczytywanie: {filepath}")
         self.log(f"Wczytywanie: {filepath} ...")
         try:
             self.temp_raw_df = pd.read_csv(filepath)
-            self.log(f"Wczytano — {self.temp_raw_df.shape[0]} wierszy, {self.temp_raw_df.shape[1]} kolumn.")
+            self.log(f"Wczytano — {self.temp_raw_df.shape[0]} wierszy," +
+                     f"{self.temp_raw_df.shape[1]} kolumn.")
             self.show_column_selector()
         except Exception as e:
             messagebox.showerror("Błąd", str(e))
@@ -399,30 +401,28 @@ class MLProjectGUI:
 
         w98_title_bar(self.popup, "Wybierz kolumny do usunięcia")
 
-        w98_label(self.popup,
-                  "Zaznacz kolumny, które chcesz ZIGNOROWAĆ (usunąć).",
-                  bold=True).pack(pady=(8, 2), padx=10, anchor=tk.W)
-        w98_label(self.popup,
-                  "Ostatnia niezaznaczona kolumna = kolumna docelowa (Target).").pack(
-            padx=10, anchor=tk.W)
+        w98_label(self.popup, "Zaznacz kolumny, które chcesz ZIGNOROWAĆ " +
+                  "(usunąć).", bold=True).pack(pady=(8, 2), padx=10,
+                                               anchor=tk.W)
+        w98_label(self.popup, "Ostatnia niezaznaczona kolumna = kolumna " +
+                  "docelowa (Target).").pack(padx=10, anchor=tk.W)
 
-        frame = tk.Frame(self.popup, bg=W98['bg_light'], relief=tk.SUNKEN, bd=2)
-        frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=8)
-        sb = w98_scrollbar(frame)
-        sb.pack(side=tk.RIGHT, fill=tk.Y)
-        self.col_listbox = w98_listbox(frame, selectmode=tk.MULTIPLE, yscrollcommand=sb.set)
-        for col in self.temp_raw_df.columns:
-            self.col_listbox.insert(tk.END, col)
-        self.col_listbox.pack(fill=tk.BOTH, expand=True)
-        sb.config(command=self.col_listbox.yview)
+        list_frame, self.col_listbox = (
+            w98_scrolled_listbox(self.popup, selectmode=tk.MULTIPLE)
+        )
+        list_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=8)
+
+        self.col_listbox.insert(tk.END, *self.temp_raw_df.columns)
 
         w98_separator(self.popup)
 
-        bf = tk.Frame(self.popup, bg=W98['bg'])
+        bf = w98_frame(self.popup)
         bf.pack(fill=tk.X, padx=10, pady=8)
-        w98_button(bf, "✔  Zatwierdź", self.apply_column_selection, width=16).pack(
-            side=tk.LEFT, padx=(0, 8))
-        w98_button(bf, "✖  Anuluj", self._cancel_load, width=16).pack(side=tk.LEFT)
+
+        w98_button(bf, "✔  Zatwierdź", self.apply_column_selection,
+                   width=16).pack(side=tk.LEFT, padx=(0, 8))
+        w98_button(bf, "✖  Anuluj", self._cancel_load,
+                   width=16).pack(side=tk.LEFT)
 
     def _cancel_load(self):
         self.temp_raw_df = None
@@ -432,14 +432,13 @@ class MLProjectGUI:
 
     def apply_column_selection(self):
         sel = self.col_listbox.curselection()
-        to_drop = [self.col_listbox.get(i) for i in sel]
-        if to_drop:
+        if sel:
+            to_drop = [self.col_listbox.get(i) for i in sel]
             self.temp_raw_df.drop(columns=to_drop, inplace=True)
             self.log(f"Usunięto kolumny: {', '.join(to_drop)}")
 
         missing_before = self.temp_raw_df.isnull().sum().sum()
-        numeric_cols_before = self.temp_raw_df.select_dtypes(include=[np.number]).shape[1]
-        object_cols_before  = self.temp_raw_df.select_dtypes(include=['object']).shape[1]
+        dtypes = self.temp_raw_df.dtypes
 
         self.df = self.temp_raw_df.select_dtypes(include=[np.number]).dropna()
 
@@ -456,10 +455,12 @@ class MLProjectGUI:
             self._meta = {
                 'rows': r, 'features': c - 1, 'target': target,
                 'missing': missing_before,
-                'numeric': numeric_cols_before, 'object': object_cols_before
+                'numeric': sum(dtypes != 'object'),
+                'object': sum(dtypes == 'object')
             }
-            self.log(f"Zbiór gotowy: {r:,} rekordów, {c-1} cech + cel '{target}'.")
-            self.set_status(f"Wczytano: {r:,} rekordów, {c-1} cech, cel: '{target}'")
+            msg = f"Zbiór gotowy: {r:,} rekordów, {c-1} cech + cel '{target}'."
+            self.log(msg)
+            self.set_status(msg)
 
         self.temp_raw_df = None
         self.popup.destroy()
@@ -467,55 +468,55 @@ class MLProjectGUI:
     # ═══════════════════════════════════════════════════════════════════════
     # ANALIZA DANYCH
     # ═══════════════════════════════════════════════════════════════════════
-
     def analyze_data(self):
         if self.df is None:
-            messagebox.showwarning("Uwaga", "Najpierw wczytaj dane (krok 1)!")
-            return
+            return messagebox.showwarning("Uwaga",
+                                          "Najpierw wczytaj dane (krok 1)!")
 
-        m = self._meta
-        target_col = m['target']
-        class_counts = self.df[target_col].value_counts()
-        class_pct    = class_counts / len(self.df) * 100
+        m, target_col = self._meta, self._meta['target']
+        class_pct = self.df[target_col].value_counts(normalize=True) * 100
 
         self.lbl_records.config(text=f"{m['rows']:,}")
         self.lbl_features.config(text=f"{m['features']}")
-        self.lbl_types.config(text=f"numeryczne: {m['numeric']}, tekstowe (wykluczone): {m['object']}")
+        self.lbl_types.config(
+            text=(f"numeryczne: {m['numeric']}, tekstowe (wykluczone): " +
+                  f"{m['object']}"))
         self.lbl_missing.config(text=f"{m['missing']:,}")
-        self.lbl_target.config(text=f"'{target_col}'  ({len(class_counts)} klas)")
+        self.lbl_target.config(text=f"'{target_col}'  ({len(class_pct)} klas)")
 
-        balance_str = ",  ".join([f"'{k}': {v:.1f}%" for k, v in class_pct.items()])
+        balance_str = ",  ".join([f"'{k}': {v:.1f}%"
+                                  for k, v in class_pct.items()])
         self.lbl_balance.config(text=balance_str)
 
-        stats = self.df.iloc[:, :-1].describe().T[['mean','std','min','25%','50%','75%','max']].round(4)
+        stats = self.df.drop(columns=[target_col]).describe().T.round(4)
         self.stats_tree.delete(*self.stats_tree.get_children())
-        cols = ['Cecha'] + list(stats.columns)
-        self.stats_tree['columns'] = cols
-        self.stats_tree['show'] = 'headings'
+
+        self.stats_tree.config(columns=['Cecha', *stats.columns],
+                               show='headings')
         self.stats_tree.heading('Cecha', text='Cecha')
         self.stats_tree.column('Cecha', width=160, anchor=tk.W)
+
         for c in stats.columns:
             self.stats_tree.heading(c, text=c)
             self.stats_tree.column(c, width=85, anchor=tk.CENTER)
+
         for feat, row in stats.iterrows():
-            self.stats_tree.insert('', tk.END, values=[feat] + list(row))
+            self.stats_tree.insert('', tk.END, values=[feat, *row])
 
         for w in self.class_chart_frame.winfo_children():
             w.destroy()
 
-        fig, ax = plt.subplots(figsize=(6, 2.2))
-        fig.patch.set_facecolor('#c0c0c0')
+        fig, ax = plt.subplots(figsize=(6, 2.2), facecolor='#c0c0c0')
+        ax.set(facecolor='#ffffff', title="Rozkład klas", ylabel="%")
+
         ax.set_facecolor('#ffffff')
-        colors = ['#000080', '#808080', '#c0c0c0', '#008080', '#800000']
-        bars = ax.bar([str(k) for k in class_counts.index],
-                      class_pct.values,
-                      color=colors[:len(class_counts)],
-                      edgecolor='black', linewidth=0.8)
-        ax.set_title("Rozkład klas", fontsize=9, fontfamily='sans-serif')
-        ax.set_ylabel("%", fontsize=8)
-        for bar, pct in zip(bars, class_pct.values):
-            ax.text(bar.get_x() + bar.get_width()/2, bar.get_height() + 0.3,
-                    f'{pct:.1f}%', ha='center', va='bottom', fontsize=7)
+
+        bars = ax.bar(class_pct.index.astype(str), class_pct.values,
+                      edgecolor='black', linewidth=0.8,
+                      color=['#000080', '#808080', '#c0c0c0',
+                             '#008080', '#800000'])
+
+        ax.bar_label(bars, fmt='%.1f%%', fontsize=7, padding=2)
         fig.tight_layout()
 
         canvas = FigureCanvasTkAgg(fig, master=self.class_chart_frame)
@@ -524,7 +525,8 @@ class MLProjectGUI:
         plt.close(fig)
 
         if any(v < 30.0 for v in class_pct.values):
-            self.log("OSTRZEŻENIE: Niezbalansowanie klas! Zwróć uwagę na Recall i Precision.")
+            self.log("OSTRZEŻENIE: Niezbalansowanie klas! Zwróć uwagę " +
+                     "na Recall i Precision.")
 
         self.log("Analiza zakończona.")
         self.set_status("Analiza danych zakończona.")
@@ -536,8 +538,7 @@ class MLProjectGUI:
 
     def select_features(self):
         if self.df is None:
-            messagebox.showwarning("Uwaga", "Najpierw wczytaj dane (krok 1)!")
-            return
+            return messagebox.showwarning("Uwaga", "Najpierw wczytaj dane (krok 1)!")
 
         self.log("Selekcja cech — SelectKBest / f_classif ...")
         self.set_status("Obliczanie ważności cech...")
@@ -545,29 +546,25 @@ class MLProjectGUI:
         y = self.df.iloc[:, -1]
         n = len(X.columns)
 
-        selector_all = SelectKBest(score_func=f_classif, k='all')
-        selector_all.fit(X, y)
-        scores = selector_all.scores_
+        selector = SelectKBest(score_func=f_classif, k='all').fit(X, y)
+        scores = selector.scores_
         self.feature_scores = dict(zip(X.columns, scores))
+        best_idx = np.argsort(scores)[::-1]
 
-        self.branches['Gałąź 1'] = list(X.columns)
+        self.branches = {
+            'Gałąź 1': list(X.columns),
+            'Gałąź 2': list(X.columns[np.sort(best_idx[:max(1, n // 2)])]),
+            'Gałąź 3': list(X.columns[np.sort(best_idx[:max(1,
+                                                            int(n * 0.2))])])
+        }
 
-        k50 = max(1, n // 2)
-        top50_idx = np.argsort(scores)[::-1][:k50]
-        self.branches['Gałąź 2'] = list(X.columns[np.sort(top50_idx)])
-
-        k20 = max(1, int(n * 0.2))
-        top20_idx = np.argsort(scores)[::-1][:k20]
-        self.branches['Gałąź 3'] = list(X.columns[np.sort(top20_idx)])
-
-        for i, (_, feats) in enumerate(self.branches.items()):
+        for i, feats in enumerate(self.branches.values()):
             self.listboxes[i].delete(0, tk.END)
-            for f in feats:
-                self.listboxes[i].insert(tk.END, f)
+            self.listboxes[i].insert(tk.END, *feats)
 
-        self.log(f"Gałąź 1: {len(self.branches['Gałąź 1'])} | "
-                 f"Gałąź 2: {len(self.branches['Gałąź 2'])} | "
-                 f"Gałąź 3: {len(self.branches['Gałąź 3'])} cech.")
+        counts = [f"G{i+1}: {len(feats)}" for i, feats in
+                  enumerate(self.branches.values())]
+        self.log(f"Wybrane cechy — {' | '.join(counts)}")
 
         self._draw_feature_importance()
         self.set_status("Selekcja cech zakończona — 3 gałęzie gotowe.")
@@ -577,19 +574,26 @@ class MLProjectGUI:
         for w in self.feat_chart_frame.winfo_children():
             w.destroy()
 
-        sorted_feats = sorted(self.feature_scores.items(), key=lambda x: x[1], reverse=True)[:20]
-        names  = [f[0] for f in sorted_feats]
-        values = [f[1] for f in sorted_feats]
+        top_feats = sorted(self.feature_scores.items(), key=lambda x: x[1],
+                           reverse=True)[:20]
+        if not top_feats:
+            return
 
-        fig, ax = plt.subplots(figsize=(8, max(2.5, len(names) * 0.3)))
-        fig.patch.set_facecolor('#c0c0c0')
-        ax.set_facecolor('#ffffff')
-        colors = ['#000080' if i < max(1, len(names)//5) else
-                  '#808080' if i < len(names)//2 else '#c0c0c0'
-                  for i in range(len(names))]
-        ax.barh(names[::-1], values[::-1], color=colors[::-1], edgecolor='black', linewidth=0.5)
-        ax.set_title("Ważność cech — SelectKBest (f_classif)", fontsize=9)
-        ax.set_xlabel("Score", fontsize=8)
+        names, values = zip(*top_feats)
+        n = len(names)
+
+        fig, ax = plt.subplots(figsize=(8, max(2.5, n * 0.3)),
+                               facecolor='#c0c0c0')
+        ax.set(
+            facecolor='#ffffff',
+            title="Ważność cech — SelectKBest (f_classif)", xlabel="Score")
+
+        colors = ['#000080' if i < max(1, n // 5) else
+                  '#808080' if i < n // 2 else '#c0c0c0'
+                  for i in range(n)]
+
+        ax.barh(names, values, color=colors, edgecolor='black', linewidth=0.5)
+        ax.invert_yaxis()
         fig.tight_layout()
 
         canvas = FigureCanvasTkAgg(fig, master=self.feat_chart_frame)
@@ -603,7 +607,8 @@ class MLProjectGUI:
 
     def ask_experiment_count(self):
         if not self.branches:
-            messagebox.showwarning("Uwaga", "Najpierw wykonaj wybór cech (krok 3)!")
+            messagebox.showwarning("Uwaga",
+                                   "Najpierw wykonaj wybór cech (krok 3)!")
             return
 
         popup = tk.Toplevel(self.root)
@@ -615,25 +620,25 @@ class MLProjectGUI:
 
         w98_title_bar(popup, "Konfiguracja eksperymentów")
 
-        cf = tk.Frame(popup, bg=W98['bg'])
+        cf = w98_frame(popup)
         cf.pack(fill=tk.BOTH, expand=True, padx=14, pady=10)
 
-        w98_label(cf, "Podaj łączną liczbę eksperymentów (min. 30).\n"
-                       "Zostaną równo podzielone na 3 gałęzie.", bold=False).pack(
-            anchor=tk.W, pady=(0, 12))
+        w98_label(cf, "Podaj łączną liczbę eksperymentów (min. 30).\n" +
+                  "Zostaną równo podzielone na 3 gałęzie.",
+                  bold=False).pack(anchor=tk.W, pady=(0, 12))
 
-        row = tk.Frame(cf, bg=W98['bg'])
+        row = w98_frame(cf)
         row.pack(fill=tk.X)
         w98_label(row, "Liczba eksperymentów:").pack(side=tk.LEFT)
 
         var = tk.StringVar(value="30")
         vcmd = (self.root.register(lambda v: v == "" or v.isdigit()), '%P')
-        entry = w98_entry(row, textvariable=var, width=7,
-                          validate='key', validatecommand=vcmd)
+
+        entry = w98_entry(row, textvariable=var, width=7, validate='key',
+                          validatecommand=vcmd)
         entry.pack(side=tk.LEFT, padx=8)
 
-        lbl_hint = tk.Label(cf, text="Na gałąź: ~10", bg=W98['bg'],
-                            fg=W98['disabled'], font=W98['font'])
+        lbl_hint = w98_label(cf, "Na gałąź: ~10", fg=W98['disabled'])
         lbl_hint.pack(anchor=tk.W, pady=(6, 0))
 
         def update_hint(*_):
@@ -648,16 +653,19 @@ class MLProjectGUI:
 
         def confirm():
             raw = var.get().strip()
-            if not raw or not raw.isdigit() or int(raw) < 1:
-                messagebox.showwarning("Błąd", "Podaj liczbę całkowitą > 0.", parent=popup)
+            if not raw or not raw.isdigit() or int(raw) < 29:
+                messagebox.showwarning("Błąd",
+                                       "Podaj liczbę całkowitą min 30.",
+                                       parent=popup)
                 return
             popup.destroy()
             self.run_experiments(int(raw))
 
-        bf = tk.Frame(cf, bg=W98['bg'])
+        bf = w98_frame(cf)
         bf.pack(fill=tk.X, pady=(10, 0))
-        w98_button(bf, "▶  Uruchom", confirm, width=14).pack(side=tk.LEFT, padx=(0, 8))
-        w98_button(bf, "Anuluj",     popup.destroy, width=10).pack(side=tk.LEFT)
+        w98_button(bf, "▶  Uruchom", confirm, width=14).pack(side=tk.LEFT,
+                                                             padx=(0, 8))
+        w98_button(bf, "Anuluj", popup.destroy, width=10).pack(side=tk.LEFT)
 
         entry.focus_set()
         entry.select_range(0, tk.END)
@@ -668,40 +676,45 @@ class MLProjectGUI:
         n_per_branch = max(1, total // 3)
         actual_total = n_per_branch * 3
 
-        self.log(f"Start: {actual_total} eksperymentów ({n_per_branch}/gałąź × 3)...")
+        self.all_results = []
+        self.results_tree.delete(*self.results_tree.get_children())
+        self.log(f"Start: {actual_total} eksperymentów ({n_per_branch}/gałąź x 3)...")
         self.set_status(f"Trwa {actual_total} eksperymentów...")
         self.all_results = []
         self.results_tree.delete(*self.results_tree.get_children())
 
-        y = self.df.iloc[:, -1]
+        y = self.df[self._meta['target']]
 
-        if n_per_branch == 1:
-            depths = [5]
-        else:
-            depths = sorted(set(np.linspace(1, 30, n_per_branch, dtype=int).tolist()))[:n_per_branch]
+        depths = [5] if n_per_branch == 1 else np.unique(np.linspace(
+            1, 30, n_per_branch, dtype=int))
 
         exp_nr = 1
         best_acc = -1
-        best_result = None
-        best_cm = None
+        best_result, best_cm = None, None
 
         for branch_name, features in self.branches.items():
             X = self.df[features]
-            X_train, X_test, y_train, y_test = train_test_split(X, y, test_size=0.3, random_state=42)
+            (X_train, X_test,
+             y_train, y_test) = train_test_split(X, y, test_size=0.3,
+                                                 random_state=42)
 
             for depth in depths:
-                model = DecisionTreeClassifier(max_depth=int(depth), random_state=42)
+                model = DecisionTreeClassifier(max_depth=int(depth),
+                                               random_state=42)
                 model.fit(X_train, y_train)
                 y_pred = model.predict(X_test)
 
                 acc  = accuracy_score(y_test, y_pred)
-                prec = precision_score(y_test, y_pred, average='weighted', zero_division=0)
-                rec  = recall_score(y_test, y_pred, average='weighted', zero_division=0)
-                f1   = f1_score(y_test, y_pred, average='weighted', zero_division=0)
+                prec = precision_score(y_test, y_pred, average='weighted',
+                                       zero_division=0)
+                rec  = recall_score(y_test, y_pred, average='weighted',
+                                    zero_division=0)
+                f1   = f1_score(y_test, y_pred, average='weighted',
+                                zero_division=0)
 
-                result = {'nr': exp_nr, 'branch': branch_name, 'depth': int(depth),
-                          'acc': acc, 'prec': prec, 'rec': rec, 'f1': f1,
-                          'classes': model.classes_}
+                result = {'nr': exp_nr, 'branch': branch_name,
+                          'depth': int(depth), 'acc': acc, 'prec': prec,
+                          'rec': rec, 'f1': f1, 'classes': model.classes_}
                 self.all_results.append(result)
 
                 self.log(f"Exp {exp_nr:>3}/{actual_total} | {branch_name} depth={int(depth):>2} | "
@@ -715,11 +728,11 @@ class MLProjectGUI:
 
                 exp_nr += 1
 
+        msg = f"Najlepszy: {best_result['branch']}, depth={best_result['depth']}, Acc={best_result['acc']*100:.2f}%"
+
         self.log(f"=== ZAKOŃCZONO {actual_total} EKSPERYMENTÓW ===")
-        self.log(f"Najlepszy: {best_result['branch']} depth={best_result['depth']} "
-                 f"Acc={best_result['acc']*100:.2f}%")
-        self.set_status(f"Zakończono! Najlepszy: {best_result['branch']}, depth={best_result['depth']}, "
-                        f"Acc={best_result['acc']*100:.2f}%")
+        self.log(msg)
+        self.set_status(f"Zakończono! {msg}")
 
         self._fill_results_table(best_result)
         self._draw_comparison_charts()
@@ -729,7 +742,8 @@ class MLProjectGUI:
 
     def _fill_results_table(self, best_result):
         self.results_tree.delete(*self.results_tree.get_children())
-        tag_map = {'Gałąź 1': 'branch1', 'Gałąź 2': 'branch2', 'Gałąź 3': 'branch3'}
+        tag_map = {'Gałąź 1': 'branch1', 'Gałąź 2': 'branch2',
+                   'Gałąź 3': 'branch3'}
         for r in self.all_results:
             tag = 'best' if r['nr'] == best_result['nr'] else tag_map.get(r['branch'], 'branch1')
             self.results_tree.insert('', tk.END, tags=(tag,), values=(
@@ -790,7 +804,8 @@ class MLProjectGUI:
         fig, ax = plt.subplots(figsize=(5, 4))
         fig.patch.set_facecolor('#c0c0c0')
         ax.set_facecolor('#ffffff')
-        disp = ConfusionMatrixDisplay(confusion_matrix=cm, display_labels=best['classes'])
+        disp = ConfusionMatrixDisplay(confusion_matrix=cm,
+                                      display_labels=best['classes'])
         disp.plot(cmap='Blues', ax=ax, values_format='d')
         ax.set_title("Macierz Pomyłek (Najlepszy Model)", fontsize=9)
         fig.tight_layout()
@@ -800,32 +815,37 @@ class MLProjectGUI:
         canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
         plt.close(fig)
 
-
     def _generate_auto_observations(self):
         if not self.all_results:
             return
 
-        lines = []
-        lines.append("=" * 58)
-        lines.append("  AUTOMATYCZNE SPOSTRZEZENIA Z EKSPERYMENTOW")
-        lines.append("=" * 58)
-        lines.append("")
+        def fm(r):
+            return (
+                f"Acc={r['acc']*100:.2f}%  Prec={r['prec']*100:.2f}% " +
+                " Rec={r['rec']*100:.2f}%  F1={r['f1']*100:.2f}%"
+            )
 
-        best  = max(self.all_results, key=lambda r: r['acc'])
+        best = max(self.all_results, key=lambda r: r['acc'])
         worst = min(self.all_results, key=lambda r: r['acc'])
 
-        lines.append(f"[+] Najlepszy: {best['branch']}, depth={best['depth']}")
-        lines.append(f"    Acc={best['acc']*100:.2f}%  Prec={best['prec']*100:.2f}%"
-                     f"  Rec={best['rec']*100:.2f}%  F1={best['f1']*100:.2f}%")
-        lines.append("")
-        lines.append(f"[-] Najgorszy: {worst['branch']}, depth={worst['depth']}")
-        lines.append(f"    Acc={worst['acc']*100:.2f}%  Prec={worst['prec']*100:.2f}%"
-                     f"  Rec={worst['rec']*100:.2f}%  F1={worst['f1']*100:.2f}%")
-        lines.append("")
-        lines.append("-" * 58)
-        lines.append("  SREDNIE PER GALAZ:")
-        lines.append("-" * 58)
+        lines = [
+            "=" * 58, "  AUTOMATYCZNE SPOSTRZEŻENIA Z EKSPERYMENTÓW", "=" * 58, "",
+            f"[+] Najlepszy: {best['branch']}, depth={best['depth']}\n    {fm(best)}\n",
+            f"[-] Najgorszy: {worst['branch']}, depth={worst['depth']}\n    {fm(worst)}\n",
+            "-" * 58, "  ŚREDNIE PER GAŁĄŹ:", "-" * 58
+        ]
 
+        avg_accs = {}
+        for b_name, features in self.branches.items():
+            br = [r for r in self.all_results if r['branch'] == b_name]
+            if not br:
+                continue
+
+            avgs = {k: np.mean([r[k] for r in br]) for k in ('acc', 'prec', 'rec', 'f1')}
+            avg_accs[b_name] = avgs['acc'] * 100
+
+            lines.append(f"  {b_name} ({len(features)} cech):\n    {fm(avgs)}")
+        lines.extend(["", "-" * 58, "  WPŁYW max_depth NA ACCURACY:", "-" * 58])
         for branch in self.branches:
             br = [r for r in self.all_results if r['branch'] == branch]
             lines.append(f"  {branch} ({len(self.branches[branch])} cech):")
@@ -842,39 +862,38 @@ class MLProjectGUI:
         for branch in self.branches:
             br = sorted([r for r in self.all_results if r['branch'] == branch],
                         key=lambda r: r['depth'])
-            if len(br) >= 2:
-                f_acc = br[0]['acc']*100
-                l_acc = br[-1]['acc']*100
-                peak  = max(br, key=lambda r: r['acc'])
-                trend = "rosnie" if l_acc > f_acc else "maleje" if l_acc < f_acc else "stabilna"
-                lines.append(f"  {branch}: trend={trend}, "
-                             f"depth {br[0]['depth']}->{br[-1]['depth']}: "
-                             f"{f_acc:.1f}%->{l_acc:.1f}%, "
-                             f"szczyt=depth{peak['depth']} ({peak['acc']*100:.2f}%)")
+            if len(br) < 2: continue
+            f_acc, l_acc = br[0]['acc'] * 100, br[-1]['acc'] * 100
+            peak = max(br, key=lambda r: r['acc'])
+            trend = ("rośnie" if l_acc > f_acc else
+                     "maleje" if l_acc < f_acc else
+                     "stabilna")
+
+            lines.append(f"  {b_name}: trend={trend}, depth {br[0]['depth']}->{br[-1]['depth']}: "
+                         f"{f_acc:.1f}%->{l_acc:.1f}%, szczyt=depth{peak['depth']} ({peak['acc']*100:.2f}%)")
 
         branch_names = list(self.branches.keys())
         if len(branch_names) >= 3:
-            lines.append("")
-            lines.append("-" * 58)
-            lines.append("  WPLYW REDUKCJI CECH:")
-            lines.append("-" * 58)
-            avg_accs = {b: np.mean([r['acc'] for r in self.all_results
-                                    if r['branch'] == b])*100
-                        for b in branch_names}
-            b1, b2, b3 = branch_names
-            lines.append(f"  G1 vs G2 (top 50%): {avg_accs[b1]-avg_accs[b2]:+.2f}%")
-            lines.append(f"  G1 vs G3 (top 20%): {avg_accs[b1]-avg_accs[b3]:+.2f}%")
-            if avg_accs[b2] > avg_accs[b1]:
-                lines.append("  => Selekcja cech POPRAWILA wynik.")
-            elif avg_accs[b2] < avg_accs[b1] - 2:
-                lines.append("  => Selekcja cech POGORSZYLA wynik.")
-            else:
-                lines.append("  => Wplyw selekcji byl MINIMALNY.")
+            b1, b2, b3 = branch_names[:3]
+            diff2 = avg_accs[b1] - avg_accs[b2]
+            diff3 = avg_accs[b1] - avg_accs[b3]
 
-        lines.append("")
-        lines.append("=" * 58)
-        lines.append("  Uzupelnij wnioski w polach po prawej stronie.")
-        lines.append("=" * 58)
+            lines.extend([
+                "", "-" * 58, "  WPŁYW REDUKCJI CECH:", "-" * 58,
+                f"  {b1} vs {b2} (top 50%): {diff2:+.2f}%",
+                f"  {b1} vs {b3} (top 20%): {diff3:+.2f}%"
+            ])
+
+            if avg_accs[b2] > avg_accs[b1]:
+                lines.append("  => Selekcja cech POPRAWIŁA wynik.")
+            elif avg_accs[b2] < avg_accs[b1] - 2:
+                lines.append("  => Selekcja cech POGORSZYŁA wynik.")
+            else:
+                lines.append("  => Wpływ selekcji był MINIMALNY.")
+
+        lines.extend(["", "=" * 58,
+                      "  Uzupełnij wnioski w polach po prawej stronie.",
+                      "=" * 58])
 
         self.auto_obs_text.config(state=tk.NORMAL)
         self.auto_obs_text.delete('1.0', tk.END)
@@ -888,6 +907,3 @@ if __name__ == "__main__":
     root = tk.Tk()
     app = MLProjectGUI(root)
     root.mainloop()
-
-
-# 1026

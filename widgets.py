@@ -1,4 +1,4 @@
-from theme import *
+from theme import W98, STYLES
 import tkinter as tk
 from tkinter import ttk
 
