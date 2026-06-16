@@ -59,15 +59,9 @@ def w98_text_area(parent, height=5, mono=False, **kw):  # pole tekstowe z przew
     sb = w98_scrollbar(frame)
     sb.pack(side=tk.RIGHT, fill=tk.Y)
 
-    local_params = {
-        'height': height,
-        'yscrollcommand': sb.set
-    }
-    if mono:
-        local_params['font'] = W98['font_mono']
-    final_opts = {**STYLES['text'], **local_params, **kw}
-
-    txt = tk.Text(frame, **final_opts)
+    font = W98['font_mono'] if mono else W98['font']
+    txt = tk.Text(frame, **{**STYLES['text'], 'height': height,
+                            'yscrollcommand': sb.set, 'font': font, **kw})
     txt.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
     sb.config(command=txt.yview)
 

@@ -822,16 +822,19 @@ class MLProjectGUI:
         def fm(r):
             return (
                 f"Acc={r['acc']*100:.2f}%  Prec={r['prec']*100:.2f}% " +
-                " Rec={r['rec']*100:.2f}%  F1={r['f1']*100:.2f}%"
+                f"Rec={r['rec']*100:.2f}%  F1={r['f1']*100:.2f}%"
             )
 
         best = max(self.all_results, key=lambda r: r['acc'])
         worst = min(self.all_results, key=lambda r: r['acc'])
 
         lines = [
-            "=" * 58, "  AUTOMATYCZNE SPOSTRZEŻENIA Z EKSPERYMENTÓW", "=" * 58, "",
-            f"[+] Najlepszy: {best['branch']}, depth={best['depth']}\n    {fm(best)}\n",
-            f"[-] Najgorszy: {worst['branch']}, depth={worst['depth']}\n    {fm(worst)}\n",
+            "=" * 58, "AUTOMATYCZNE SPOSTRZEŻENIA Z EKSPERYMENTÓW",
+            "=" * 58, "",
+            f"[+] Najlepszy: {best['branch']}, depth={best['depth']}\n" +
+            f"    {fm(best)}\n",
+            f"[-] Najgorszy: {worst['branch']}, depth={worst['depth']}\n" +
+            f"    {fm(worst)}\n",
             "-" * 58, "  ŚREDNIE PER GAŁĄŹ:", "-" * 58
         ]
 
@@ -841,36 +844,33 @@ class MLProjectGUI:
             if not br:
                 continue
 
-            avgs = {k: np.mean([r[k] for r in br]) for k in ('acc', 'prec', 'rec', 'f1')}
+            avgs = {k: np.mean([r[k] for r in br]) for k in ('acc', 'prec',
+                                                             'rec', 'f1')}
             avg_accs[b_name] = avgs['acc'] * 100
 
             lines.append(f"  {b_name} ({len(features)} cech):\n    {fm(avgs)}")
-        lines.extend(["", "-" * 58, "  WPŁYW max_depth NA ACCURACY:", "-" * 58])
-        for branch in self.branches:
-            br = [r for r in self.all_results if r['branch'] == branch]
-            lines.append(f"  {branch} ({len(self.branches[branch])} cech):")
-            lines.append(f"    Acc={np.mean([r['acc'] for r in br])*100:.2f}%  "
-                         f"Prec={np.mean([r['prec'] for r in br])*100:.2f}%  "
-                         f"Rec={np.mean([r['rec'] for r in br])*100:.2f}%  "
-                         f"F1={np.mean([r['f1'] for r in br])*100:.2f}%")
 
-        lines.append("")
-        lines.append("-" * 58)
-        lines.append("  WPLYW max_depth NA ACCURACY:")
-        lines.append("-" * 58)
+        lines.extend(["", "-" * 58, "  WPŁYW max_depth NA ACCURACY:",
+                      "-" * 58])
 
-        for branch in self.branches:
-            br = sorted([r for r in self.all_results if r['branch'] == branch],
+        for b_name in self.branches:
+            br = sorted([r for r in self.all_results if r['branch'] == b_name],
                         key=lambda r: r['depth'])
-            if len(br) < 2: continue
+            if len(br) < 2:
+                continue
+
             f_acc, l_acc = br[0]['acc'] * 100, br[-1]['acc'] * 100
             peak = max(br, key=lambda r: r['acc'])
             trend = ("rośnie" if l_acc > f_acc else
                      "maleje" if l_acc < f_acc else
                      "stabilna")
 
-            lines.append(f"  {b_name}: trend={trend}, depth {br[0]['depth']}->{br[-1]['depth']}: "
-                         f"{f_acc:.1f}%->{l_acc:.1f}%, szczyt=depth{peak['depth']} ({peak['acc']*100:.2f}%)")
+            lines.append(
+                f"{b_name}: trend={trend}, depth {br[0]['depth']}" +
+                f"->{br[-1]['depth']}: "
+                f"{f_acc:.1f}%->{l_acc:.1f}%, szczyt=depth{peak['depth']} " +
+                f"({peak['acc']*100:.2f}%)"
+                )
 
         branch_names = list(self.branches.keys())
         if len(branch_names) >= 3:
