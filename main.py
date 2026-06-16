@@ -41,7 +41,9 @@ STYLES = {
     'listbox': {'bg': W98['bg_light'], 'fg': W98['text'],
                 'font': W98['font_mono'], 'relief': tk.SUNKEN, 'bd': 2,
                 'selectbackground': W98['select_bg'],
-                'selectforeground': W98['select_fg']}
+                'selectforeground': W98['select_fg']},
+    'text':    {'bg': W98['bg_light'], 'fg': W98['text'], 'font': W98['font'],
+                'relief': tk.FLAT, 'insertbackground': W98['text']}
 }
 
 
@@ -94,6 +96,26 @@ def w98_title_bar(parent, title):  # pasek tytułu
 def w98_separator(parent):  # poziomy separator
     tk.Frame(parent, bg=W98['bg_dark'], height=1).pack(fill=tk.X, pady=2)
     tk.Frame(parent, bg='white', height=1).pack(fill=tk.X)
+
+
+def w98_text_area(parent, height=5, mono=False, **kw):  # pole tekstowe z przew
+    frame = w98_frame(parent, relief=tk.SUNKEN, bd=2)
+    sb = w98_scrollbar(frame)
+    sb.pack(side=tk.RIGHT, fill=tk.Y)
+
+    local_params = {
+        'height': height,
+        'yscrollcommand': sb.set
+    }
+    if mono:
+        local_params['font'] = W98['font_mono']
+    final_opts = {**STYLES['text'], **local_params, **kw}
+
+    txt = tk.Text(frame, **final_opts)
+    txt.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
+    sb.config(command=txt.yview)
+
+    return frame, txt
 
 
 class W98Notebook:
@@ -189,56 +211,53 @@ class MLProjectGUI:
         style.configure("W98.Horizontal.TScrollbar", background=W98['bg'])
 
     def create_widgets(self):
-        # ── Pasek tytułu aplikacji ────────────────────────────────────────
+        # pasek tytułu aplikacji
         w98_title_bar(self.root, "Środowisko Eksperymentów ML — Projekt")
 
-        # ── Menu bar (dekoracyjny) ────────────────────────────────────────
-        menubar = tk.Frame(self.root, bg=W98['bg'], relief=tk.FLAT)
+        # menu bar
+        menubar = w98_frame(self.root, relief=tk.FLAT)
         menubar.pack(fill=tk.X)
         for item in ["Plik", "Widok", "Narzędzia", "Pomoc"]:
-            tk.Label(menubar, text=item, bg=W98['bg'], fg=W98['text'],
-                     font=W98['font'], padx=6, pady=2,
-                     cursor='arrow').pack(side=tk.LEFT)
+            w98_label(menubar, item, cursor='arrow',
+                      padx=6, pady=2).pack(side=tk.LEFT)
         w98_separator(self.root)
 
-        # ── Główny układ ──────────────────────────────────────────────────
-        main = tk.Frame(self.root, bg=W98['bg'])
+        # główny układ
+        main = w98_frame(self.root)
         main.pack(fill=tk.BOTH, expand=True, padx=4, pady=2)
 
-        # Sidebar
-        self.sidebar = tk.Frame(main, bg=W98['bg'], width=200,
-                                relief=tk.GROOVE, bd=2)
+        # sidebar
+        self.sidebar = w98_frame(main, width=200, relief=tk.GROOVE, bd=2)
         self.sidebar.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 4))
         self.sidebar.pack_propagate(False)
 
-        # Prawa strona
-        right = tk.Frame(main, bg=W98['bg'])
+        # prawa strona
+        right = w98_frame(main)
         right.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
-        # Notebook
+        # notebook
         self.notebook = W98Notebook(right)
 
-        # Log na dole
+        # log na dole
         log_outer, log_inner = w98_labelframe(right, "Konsola / Log")
         log_outer.pack(fill=tk.X, pady=(4, 0))
-        self.console = tk.Text(log_inner, height=6,
-                               bg=W98['console_bg'], fg=W98['console_fg'],
-                               font=W98['font_mono'],
-                               relief=tk.SUNKEN, bd=1,
-                               insertbackground='white',
-                               state=tk.NORMAL)
-        csb = w98_scrollbar(log_inner, command=self.console.yview)
-        csb.pack(side=tk.RIGHT, fill=tk.Y)
-        self.console.configure(yscrollcommand=csb.set)
-        self.console.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
+
+        # tekst konsoli
+        txt_frame, self.console = w98_text_area(
+            log_inner, height=6, mono=True,
+            bg=W98['console_bg'], fg=W98['console_fg'],
+            insertbackground='white'
+        )
+        txt_frame.pack(fill=tk.BOTH, expand=True)
 
         self.build_sidebar()
         self.build_tabs()
 
-        self.statusbar = tk.Label(self.root,
-                                   text="  Gotowy. Wczytaj plik CSV, aby rozpocząć.",
-                                   bg=W98['bg_dark'], fg='white',
-                                   font=W98['font'], anchor=tk.W, relief=tk.SUNKEN, bd=1)
+        # Pasek statusu
+        self.statusbar = w98_label(self.root, "  Gotowy. Wczytaj plik CSV," +
+                                   "aby rozpocząć.", bg=W98['bg_dark'],
+                                   fg='white', anchor=tk.W, relief=tk.SUNKEN,
+                                   bd=1)
         self.statusbar.pack(fill=tk.X, side=tk.BOTTOM)
 
         self.log("System gotowy. Oczekuję na wczytanie danych...")
@@ -254,13 +273,11 @@ class MLProjectGUI:
                  bg=W98['title_bg'], fg='white',
                  font=W98['font_bold'], pady=8, anchor=tk.W).pack(fill=tk.X)
 
-        tk.Frame(self.sidebar, bg=W98['bg'], height=8).pack()
-
         steps = [
-            ("📂  1. Wczytaj Zbiór", self.load_data),
-            ("📊  2. Analiza Danych", self.analyze_data),
-            ("🔍  3. Wybór Cech",    self.select_features),
-            ("▶   4. Uruchom\n       Eksperymenty", self.ask_experiment_count),
+            ("1. Wczytaj Zbiór", self.load_data),
+            ("2. Analiza Danych", self.analyze_data),
+            ("3. Wybór Cech",    self.select_features),
+            ("4. Uruchom\n       Eksperymenty", self.ask_experiment_count),
         ]
 
         for label, cmd in steps:
@@ -1004,3 +1021,6 @@ if __name__ == "__main__":
     root = tk.Tk()
     app = MLProjectGUI(root)
     root.mainloop()
+
+
+# 1026
