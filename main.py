@@ -1,48 +1,46 @@
 import tkinter as tk
-from tkinter import ttk, filedialog, messagebox, scrolledtext
+from tkinter import ttk, filedialog, messagebox
 import pandas as pd
 import numpy as np
 
 from sklearn.model_selection import train_test_split
 from sklearn.feature_selection import SelectKBest, f_classif
 from sklearn.tree import DecisionTreeClassifier
-from sklearn.metrics import (accuracy_score, precision_score, recall_score,
-                              f1_score, confusion_matrix, ConfusionMatrixDisplay)
+from sklearn.metrics import (
+    accuracy_score, precision_score, recall_score,
+    f1_score, confusion_matrix, ConfusionMatrixDisplay)
 
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
+
+# kolory
 W98 = {
-    'bg':           '#c0c0c0',
-    'bg_dark':      '#808080',
-    'bg_light':     '#ffffff',
-    'title_bg':     '#000080',
-    'title_fg':     '#ffffff',
-    'btn_bg':       '#c0c0c0',
-    'btn_active':   '#c0c0c0',
-    'text':         '#000000',
-    'disabled':     '#808080',
-    'highlight':    '#000080',
-    'console_bg':   '#000000',
-    'console_fg':   '#c0c0c0',
-    'select_bg':    '#000080',
-    'select_fg':    '#ffffff',
-    'font':         ('Microsoft Sans Serif', 8),
-    'font_bold':    ('Microsoft Sans Serif', 8, 'bold'),
-    'font_title':   ('Microsoft Sans Serif', 10, 'bold'),
-    'font_mono':    ('Courier New', 8),
+    'bg': '#c0c0c0', 'bg_dark': '#808080', 'bg_light': '#ffffff',
+    'title_bg': '#000080', 'title_fg': '#ffffff',
+    'btn_bg': '#c0c0c0', 'btn_active': '#c0c0c0',
+    'text': '#000000', 'disabled': '#808080', 'highlight': '#000080',
+    'console_bg': '#000000', 'console_fg': '#c0c0c0',
+    'select_bg': '#000080', 'select_fg':  '#ffffff',
+    'font': ('Microsoft Sans Serif', 8), 'font_mono': ('Courier New', 8),
+    'font_bold': ('Microsoft Sans Serif', 8, 'bold'),
+    'font_title': ('Microsoft Sans Serif', 10, 'bold'),
 }
 
-def w98_frame(parent, **kw):
+
+# funkcje tworzące części UI
+def w98_frame(parent, **kw):  # ramka
     return tk.Frame(parent, bg=W98['bg'], **kw)
 
-def w98_label(parent, text, bold=False, **kw):
+
+def w98_label(parent, text, bold=False, **kw):  # etykieta
     font = W98['font_bold'] if bold else W98['font']
     return tk.Label(parent, text=text, bg=W98['bg'], fg=W98['text'],
                     font=font, **kw)
 
-def w98_button(parent, text, command, width=None, **kw):
+
+def w98_button(parent, text, command, width=None, **kw): # funkcja tworząca przycisk
     btn = tk.Button(
         parent, text=text, command=command,
         bg=W98['btn_bg'], fg=W98['text'],
@@ -56,7 +54,8 @@ def w98_button(parent, text, command, width=None, **kw):
     )
     return btn
 
-def w98_entry(parent, textvariable=None, width=10, **kw):
+
+def w98_entry(parent, textvariable=None, width=10, **kw): # funkcja tworząca pole tekstowe
     return tk.Entry(
         parent, bg=W98['bg_light'], fg=W98['text'],
         font=W98['font'], relief=tk.SUNKEN, bd=2,
@@ -64,7 +63,8 @@ def w98_entry(parent, textvariable=None, width=10, **kw):
         textvariable=textvariable, width=width, **kw
     )
 
-def w98_listbox(parent, **kw):
+
+def w98_listbox(parent, **kw): # funkcja tworząca listę
     return tk.Listbox(
         parent, bg=W98['bg_light'], fg=W98['text'],
         font=W98['font_mono'],
@@ -74,10 +74,12 @@ def w98_listbox(parent, **kw):
         **kw
     )
 
-def w98_scrollbar(parent, **kw):
+
+def w98_scrollbar(parent, **kw): # funkcja tworząca pasek przewijania
     return tk.Scrollbar(parent, **kw)
 
-def w98_labelframe(parent, text, **kw):
+
+def w98_labelframe(parent, text, **kw): # funkcja tworząca ramkę z nagłówkiem
     outer = tk.Frame(parent, bg=W98['bg'], **kw)
     tk.Label(outer, text=f" {text} ", bg=W98['bg'], fg=W98['text'],
              font=W98['font_bold']).pack(anchor=tk.W, padx=4)
@@ -85,7 +87,8 @@ def w98_labelframe(parent, text, **kw):
     inner.pack(fill=tk.BOTH, expand=True, padx=4, pady=(0, 4))
     return outer, inner
 
-def w98_title_bar(parent, title, icon="🖥"):
+
+def w98_title_bar(parent, title, icon="🖥"): # funkcja tworząca pasek tytułu
     bar = tk.Frame(parent, bg=W98['title_bg'], height=20)
     bar.pack(fill=tk.X)
     bar.pack_propagate(False)
@@ -93,7 +96,8 @@ def w98_title_bar(parent, title, icon="🖥"):
              font=W98['font_bold'], anchor=tk.W).pack(side=tk.LEFT, fill=tk.Y)
     return bar
 
-def w98_separator(parent):
+
+def w98_separator(parent): # funkcja tworząca poziomy separator
     tk.Frame(parent, bg=W98['bg_dark'], height=1).pack(fill=tk.X, pady=2)
     tk.Frame(parent, bg='white', height=1).pack(fill=tk.X)
 
