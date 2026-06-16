@@ -118,6 +118,36 @@ def w98_text_area(parent, height=5, mono=False, **kw):  # pole tekstowe z przew
     return frame, txt
 
 
+def w98_treeview(parent, height=10, **kw):  # tabela treeview
+    frame = w98_frame(parent)
+    tree = ttk.Treeview(frame, style="W98.Treeview", height=height, **kw)
+
+    sy = ttk.Scrollbar(frame, orient=tk.VERTICAL, command=tree.yview,
+                       style="W98.Vertical.TScrollbar")
+    sx = ttk.Scrollbar(frame, orient=tk.HORIZONTAL, command=tree.xview,
+                       style="W98.Horizontal.TScrollbar")
+
+    tree.configure(yscrollcommand=sy.set, xscrollcommand=sx.set)
+
+    sy.pack(side=tk.RIGHT, fill=tk.Y)
+    sx.pack(side=tk.BOTTOM, fill=tk.X)
+    tree.pack(fill=tk.BOTH, expand=True)
+
+    return frame, tree
+
+
+def w98_scrolled_listbox(parent, **kw):
+    frame = w98_frame(parent, relief=tk.SUNKEN, bd=2)
+    sb = w98_scrollbar(frame)
+    sb.pack(side=tk.RIGHT, fill=tk.Y)
+    
+    lb = w98_listbox(frame, yscrollcommand=sb.set, **kw)
+    lb.pack(fill=tk.BOTH, expand=True)
+    sb.config(command=lb.yview)
+    
+    return frame, lb
+
+
 class W98Notebook:
     def __init__(self, parent):
         self.parent = parent
@@ -267,70 +297,58 @@ class MLProjectGUI:
         self.root.update()
 
     def build_sidebar(self):
-        hdr = tk.Frame(self.sidebar, bg=W98['title_bg'])
-        hdr.pack(fill=tk.X)
-        tk.Label(hdr, text="  📁 ML Eksperymenty",
-                 bg=W98['title_bg'], fg='white',
-                 font=W98['font_bold'], pady=8, anchor=tk.W).pack(fill=tk.X)
+        hdr = w98_frame(self.sidebar, bg=W98['title_bg'])
+        hdr.pack(fill=tk.X, pady=(0, 8))
+        w98_label(hdr, "ML Eksperymenty", bg=W98['title_bg'], fg='white',
+                  bold=True, anchor=tk.W).pack(fill=tk.X, pady=8)
 
         steps = [
             ("1. Wczytaj Zbiór", self.load_data),
             ("2. Analiza Danych", self.analyze_data),
             ("3. Wybór Cech",    self.select_features),
-            ("4. Uruchom\n       Eksperymenty", self.ask_experiment_count),
+            ("4. Uruchom Eksperymenty", self.ask_experiment_count),
         ]
 
         for label, cmd in steps:
-            btn = w98_button(self.sidebar, label, cmd)
-            btn.config(anchor=tk.W, padx=8, pady=4, wraplength=180, justify=tk.LEFT)
-            btn.pack(fill=tk.X, padx=6, pady=3)
+            w98_button(self.sidebar, label, cmd, anchor=tk.W, padx=8, pady=4,
+                       wraplength=180, justify=tk.LEFT).pack(fill=tk.X,
+                                                             padx=6, pady=3)
+        w98_separator(self.sidebar)
 
-        tk.Frame(self.sidebar, bg=W98['bg_dark'], height=1).pack(fill=tk.X, padx=4, pady=8)
-        tk.Frame(self.sidebar, bg='white', height=1).pack(fill=tk.X, padx=4)
-        tk.Frame(self.sidebar, bg=W98['bg'], height=4).pack()
-
-        info = tk.Label(self.sidebar,
-                        text="Drzewo decyzyjne\nDecisionTreeClassifier\nscikit-learn",
-                        bg=W98['bg'], fg=W98['disabled'],
-                        font=('Courier New', 7), justify=tk.CENTER)
-        info.pack(pady=4)
+        w98_label(self.sidebar, "Drzewo decyzyjne\nDecisionTreeClassifier\n" +
+                  "scikit-learn", fg=W98['disabled'], font=('Courier New', 7),
+                  justify=tk.CENTER).pack(pady=(8, 4))
 
     def build_tabs(self):
-        # ── TAB 1: Analiza zbioru ─────────────────────────────────────────
-        t1 = self.notebook.add("Analiza Zbioru")
-        self.tab_data = t1
-        self._build_tab_data(t1)
+        # ── TAB 1: Analiza zbioru
+        self.tab_data = self.notebook.add("Analiza Zbioru")
+        self._build_tab_data(self.tab_data)
 
-        # ── TAB 2: Gałęzie ────────────────────────────────────────────────
-        t2 = self.notebook.add("Konfiguracja Gałęzi")
-        self.tab_branches = t2
-        self._build_tab_branches(t2)
+        # ── TAB 2: Gałęzie
+        self.tab_branches = self.notebook.add("Konfiguracja Gałęzi")
+        self._build_tab_branches(self.tab_branches)
 
-        # ── TAB 3: Tabela wyników ─────────────────────────────────────────
-        t3 = self.notebook.add("Tabela Wyników")
-        self.tab_table = t3
-        self._build_tab_table(t3)
+        # ── TAB 3: Tabela wyników
+        self.tab_table = self.notebook.add("Tabela Wyników")
+        self._build_tab_table(self.tab_table)
 
-        # ── TAB 4: Wykresy ────────────────────────────────────────────────
-        t4 = self.notebook.add("Wykresy Porównawcze")
-        self.tab_charts = t4
-        self.compare_chart_frame = tk.Frame(t4, bg=W98['bg_light'])
+        # ── TAB 4: Wykresy
+        self.tab_charts = self.notebook.add("Wykresy Porównawcze")
+        self.compare_chart_frame = w98_frame(self.tab_charts, bg=W98['bg_light'])
         self.compare_chart_frame.pack(fill=tk.BOTH, expand=True)
 
-        # ── TAB 5: Najlepszy model ────────────────────────────────────────
-        t5 = self.notebook.add("Najlepszy Model")
-        self.tab_results = t5
-        self._build_tab_results(t5)
+        # ── TAB 5: Najlepszy model
+        self.tab_results = self.notebook.add("Najlepszy Model")
+        self._build_tab_results(self.tab_results)
 
-        # ── TAB 6: Obserwacje ─────────────────────────────────────────────
-        t6 = self.notebook.add("Obserwacje i Wnioski")
-        self.tab_obs = t6
-        self.build_observations_tab(t6)
+        # ── TAB 6: Obserwacje
+        self.tab_obs = self.notebook.add("Obserwacje i Wnioski")
+        self.build_observations_tab(self.tab_obs)
 
     def _build_tab_data(self, parent):
         w98_title_bar(parent, "Informacje o wczytanym zbiorze danych")
 
-        info_f = tk.Frame(parent, bg=W98['bg'])
+        info_f = w98_frame(parent)
         info_f.pack(fill=tk.X, padx=8, pady=6)
 
         labels_def = [
@@ -341,40 +359,34 @@ class MLProjectGUI:
             ("Zbalansowanie klas:", "lbl_balance"),
             ("Kolumna docelowa:", "lbl_target"),
         ]
+
         for i, (caption, attr) in enumerate(labels_def):
-            tk.Label(info_f, text=caption, bg=W98['bg'], fg=W98['text'],
-                     font=W98['font_bold'], width=22, anchor=tk.E).grid(
+            w98_label(info_f, caption, bold=True, width=22, anchor=tk.E).grid(
                 row=i, column=0, sticky=tk.E, padx=(0, 4), pady=1)
-            lbl = tk.Label(info_f, text="—", bg=W98['bg'], fg=W98['text'],
-                           font=W98['font'], anchor=tk.W)
+
+            lbl = w98_label(info_f, "—", anchor=tk.W)
             lbl.grid(row=i, column=1, sticky=tk.W, pady=1)
             setattr(self, attr, lbl)
 
         w98_separator(parent)
+        w98_label(parent, "Statystyki opisowe cech:",
+                  bold=True).pack(anchor=tk.W, padx=8, pady=(4, 2))
 
-        w98_label(parent, "Statystyki opisowe cech:", bold=True).pack(
-            anchor=tk.W, padx=8, pady=(4, 2))
-
-        stats_wrap = tk.Frame(parent, bg=W98['bg'])
+        stats_wrap, self.stats_tree = w98_treeview(parent, height=7)
         stats_wrap.pack(fill=tk.BOTH, expand=True, padx=8, pady=2)
 
-        self.stats_tree = ttk.Treeview(stats_wrap, style="W98.Treeview", height=7)
-        sy = ttk.Scrollbar(stats_wrap, orient=tk.VERTICAL, command=self.stats_tree.yview,
-                            style="W98.Vertical.TScrollbar")
-        sx = ttk.Scrollbar(stats_wrap, orient=tk.HORIZONTAL, command=self.stats_tree.xview,
-                            style="W98.Horizontal.TScrollbar")
-        self.stats_tree.configure(yscrollcommand=sy.set, xscrollcommand=sx.set)
-        sy.pack(side=tk.RIGHT, fill=tk.Y)
-        sx.pack(side=tk.BOTTOM, fill=tk.X)
-        self.stats_tree.pack(fill=tk.BOTH, expand=True)
-
-        _, self.class_chart_frame = w98_labelframe(parent, "Rozkład klas (cel klasyfikacji)")
-        self.class_chart_frame.master.pack(fill=tk.BOTH, expand=True, padx=8, pady=4)
+        _, self.class_chart_frame = (
+                                    w98_labelframe(parent,
+                                                   "Rozkład klas (cel" +
+                                                   "klasyfikacji)")
+        )
+        self.class_chart_frame.master.pack(fill=tk.BOTH, expand=True,
+                                           padx=8, pady=4)
 
     def _build_tab_branches(self, parent):
         w98_title_bar(parent, "Zestawy cech — 3 gałęzie eksperymentów")
 
-        branches_f = tk.Frame(parent, bg=W98['bg'])
+        branches_f = w98_frame(parent)
         branches_f.pack(fill=tk.BOTH, expand=True, padx=8, pady=6)
 
         self.listboxes = []
@@ -383,70 +395,68 @@ class MLProjectGUI:
             "Gałąź 2: Top 50% (SelectKBest)",
             "Gałąź 3: Top 20% (ścisła selekcja)",
         ]
+
         for t in titles:
-            col = tk.Frame(branches_f, bg=W98['bg'])
+            col = w98_frame(branches_f)
             col.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=4)
             w98_label(col, t, bold=True).pack(anchor=tk.W, pady=(0, 2))
-            box_f = tk.Frame(col, bg=W98['bg'], relief=tk.SUNKEN, bd=2)
+
+            box_f, lb = w98_scrolled_listbox(col)
             box_f.pack(fill=tk.BOTH, expand=True)
-            sb = w98_scrollbar(box_f)
-            sb.pack(side=tk.RIGHT, fill=tk.Y)
-            lb = w98_listbox(box_f, yscrollcommand=sb.set)
-            lb.pack(fill=tk.BOTH, expand=True)
-            sb.config(command=lb.yview)
             self.listboxes.append(lb)
 
-        _, self.feat_chart_frame = w98_labelframe(parent, "Ważność cech — SelectKBest (f_classif score)")
+        _, self.feat_chart_frame = w98_labelframe(parent, "Ważność cech — " +
+                                                  "SelectKBest (f_classif " +
+                                                  "score)")
         self.feat_chart_frame.master.pack(fill=tk.BOTH, expand=True, padx=8, pady=4)
 
     def _build_tab_table(self, parent):
         w98_title_bar(parent, "Wyniki wszystkich eksperymentów")
 
-        tbl_f = tk.Frame(parent, bg=W98['bg'])
+        cols = ("Nr", "Gałąź", "max_depth", "Accuracy",
+                "Precision", "Recall", "F1")
+
+        tbl_f, self.results_tree = w98_treeview(parent, height=25,
+                                                columns=cols, show='headings')
         tbl_f.pack(fill=tk.BOTH, expand=True, padx=8, pady=6)
 
-        cols = ("Nr", "Gałąź", "max_depth", "Accuracy", "Precision", "Recall", "F1")
-        self.results_tree = ttk.Treeview(tbl_f, columns=cols, show='headings',
-                                          style="W98.Treeview", height=25)
         widths = [35, 170, 75, 90, 90, 90, 90]
         for c, w in zip(cols, widths):
             self.results_tree.heading(c, text=c)
             self.results_tree.column(c, width=w, anchor=tk.CENTER)
 
-        vsb = ttk.Scrollbar(tbl_f, orient=tk.VERTICAL, command=self.results_tree.yview,
-                             style="W98.Vertical.TScrollbar")
-        self.results_tree.configure(yscrollcommand=vsb.set)
-        vsb.pack(side=tk.RIGHT, fill=tk.Y)
-        self.results_tree.pack(fill=tk.BOTH, expand=True)
-
-        self.results_tree.tag_configure('best',    background='#00ff00', foreground='#000080')
+        self.results_tree.tag_configure('best', background='#00ff00',
+                                        foreground='#000080')
         self.results_tree.tag_configure('branch1', background='#ffffff')
         self.results_tree.tag_configure('branch2', background='#eeeeee')
         self.results_tree.tag_configure('branch3', background='#dde8ff')
 
     def _build_tab_results(self, parent):
-        w98_title_bar(parent, "Najlepszy model spośród wszystkich eksperymentów")
+        w98_title_bar(parent, "Najlepszy model spośród wszystkich" +
+                      " eksperymentów")
 
-        mf = tk.Frame(parent, bg=W98['bg'])
+        mf = w98_frame(parent)
         mf.pack(fill=tk.X, padx=8, pady=8)
 
-        self.lbl_best_info = tk.Label(mf, text="Mierniki najlepszego modelu:",
-                                       bg=W98['bg'], fg=W98['text'], font=W98['font_title'])
-        self.lbl_best_info.grid(row=0, column=0, columnspan=4, sticky=tk.W, pady=(0, 6))
+        self.lbl_best_info = w98_label(mf, "Mierniki najlepszego modelu:",
+                                       font=W98['font_title'])
+        self.lbl_best_info.grid(row=0, column=0, columnspan=4, sticky=tk.W,
+                                pady=(0, 6))
 
-        self.lbl_acc  = tk.Label(mf, text="Accuracy: —",  bg=W98['bg'], fg=W98['text'], font=W98['font'],
-                                  relief=tk.GROOVE, bd=1, padx=8, pady=4)
-        self.lbl_prec = tk.Label(mf, text="Precision: —", bg=W98['bg'], fg=W98['text'], font=W98['font'],
-                                  relief=tk.GROOVE, bd=1, padx=8, pady=4)
-        self.lbl_rec  = tk.Label(mf, text="Recall: —",    bg=W98['bg'], fg=W98['text'], font=W98['font'],
-                                  relief=tk.GROOVE, bd=1, padx=8, pady=4)
-        self.lbl_f1   = tk.Label(mf, text="F1-Score: —",  bg=W98['bg'], fg=W98['text'], font=W98['font'],
-                                  relief=tk.GROOVE, bd=1, padx=8, pady=4)
+        metrics = [
+            ("Accuracy: —", "lbl_acc"),
+            ("Precision: —", "lbl_prec"),
+            ("Recall: —", "lbl_rec"),
+            ("F1-Score: —", "lbl_f1")
+        ]
 
-        for col, lbl in enumerate([self.lbl_acc, self.lbl_prec, self.lbl_rec, self.lbl_f1]):
+        for col, (text, attr) in enumerate(metrics):
+            lbl = w98_label(mf, text, relief=tk.GROOVE, bd=1, padx=8, pady=4)
             lbl.grid(row=1, column=col, sticky=tk.W, padx=8, pady=2)
+            setattr(self, attr, lbl)
 
-        _, self.cm_frame = w98_labelframe(parent, "Macierz Pomyłek (Confusion Matrix)")
+        _, self.cm_frame = w98_labelframe(parent, "Macierz Pomyłek" +
+                                          " (Confusion Matrix)")
         self.cm_frame.master.pack(fill=tk.BOTH, expand=True, padx=8, pady=4)
 
     def build_observations_tab(self, parent):
@@ -465,11 +475,11 @@ class MLProjectGUI:
         asb = w98_scrollbar(auto_f)
         asb.pack(side=tk.RIGHT, fill=tk.Y)
         self.auto_obs_text = tk.Text(auto_f,
-                                      bg=W98['console_bg'], fg='#00ff00',
-                                      font=W98['font_mono'],
-                                      wrap=tk.WORD, state=tk.DISABLED,
-                                      relief=tk.FLAT,
-                                      yscrollcommand=asb.set)
+                                     bg=W98['console_bg'], fg='#00ff00',
+                                     font=W98['font_mono'],
+                                     wrap=tk.WORD, state=tk.DISABLED,
+                                     relief=tk.FLAT,
+                                     yscrollcommand=asb.set)
         asb.config(command=self.auto_obs_text.yview)
         self.auto_obs_text.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
 
