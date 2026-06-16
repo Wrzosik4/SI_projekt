@@ -462,28 +462,21 @@ class MLProjectGUI:
     def build_observations_tab(self, parent):
         w98_title_bar(parent, "Obserwacje i wnioski z eksperymentów")
 
-        paned = tk.Frame(parent, bg=W98['bg'])
+        paned = w98_frame(parent)
         paned.pack(fill=tk.BOTH, expand=True, padx=8, pady=6)
 
-        left = tk.Frame(paned, bg=W98['bg'])
+        left = w98_frame(paned)
         left.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 4))
 
         w98_label(left, "Automatyczne spostrzeżenia:", bold=True).pack(anchor=tk.W, pady=(0, 2))
 
-        auto_f = tk.Frame(left, bg=W98['console_bg'], relief=tk.SUNKEN, bd=2)
+        auto_f, self.auto_obs_text = w98_text_area(
+            left, mono=True, wrap=tk.WORD, state=tk.DISABLED,
+            bg=W98['console_bg'], fg='#00ff00'
+        )
         auto_f.pack(fill=tk.BOTH, expand=True)
-        asb = w98_scrollbar(auto_f)
-        asb.pack(side=tk.RIGHT, fill=tk.Y)
-        self.auto_obs_text = tk.Text(auto_f,
-                                     bg=W98['console_bg'], fg='#00ff00',
-                                     font=W98['font_mono'],
-                                     wrap=tk.WORD, state=tk.DISABLED,
-                                     relief=tk.FLAT,
-                                     yscrollcommand=asb.set)
-        asb.config(command=self.auto_obs_text.yview)
-        self.auto_obs_text.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
 
-        right = tk.Frame(paned, bg=W98['bg'])
+        right = w98_frame(paned)
         right.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
         sections = [
@@ -491,27 +484,20 @@ class MLProjectGUI:
             ("Wnioski (na podstawie obserwacji):",      "wn_text"),
             ("Wnioski końcowe do projektu:",            "end_text"),
         ]
+        
         for caption, attr in sections:
             w98_label(right, caption, bold=True).pack(anchor=tk.W, pady=(6, 1))
-            f = tk.Frame(right, bg=W98['bg_light'], relief=tk.SUNKEN, bd=2)
+            
+            f, txt = w98_text_area(right, height=5, wrap=tk.WORD)
             f.pack(fill=tk.BOTH, expand=True)
-            sb2 = w98_scrollbar(f)
-            sb2.pack(side=tk.RIGHT, fill=tk.Y)
-            txt = tk.Text(f, bg=W98['bg_light'], fg=W98['text'],
-                          font=W98['font'], wrap=tk.WORD, height=5,
-                          relief=tk.FLAT, yscrollcommand=sb2.set)
-            sb2.config(command=txt.yview)
-            txt.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
+            
             setattr(self, attr, txt)
-
-    def build_log_panel(self):
-        pass
 
     def log(self, message):
         self.console.config(state=tk.NORMAL)
         self.console.insert(tk.END, f"> {message}\n")
         self.console.see(tk.END)
-        self.console.config(state=tk.NORMAL)
+        self.console.config(state=tk.DISABLED)
         self.root.update()
 
     # ═══════════════════════════════════════════════════════════════════════
