@@ -45,7 +45,7 @@ STYLES = {
 }
 
 
-# funkcje tworzące części UI
+# funkcje tworzące podstawowe części UI
 def w98_frame(parent, **kw):  # ramka
     return tk.Frame(parent, **{**STYLES['frame'], **kw})
 
@@ -73,25 +73,25 @@ def w98_scrollbar(parent, **kw):  # pasek przewijania
     return tk.Scrollbar(parent, **kw)
 
 
+# funkcje tworzące bardziej skomplikowane części UI
 def w98_labelframe(parent, text, **kw):  # ramka z nagłówkiem
-    outer = tk.Frame(parent, bg=W98['bg'], **kw)
-    tk.Label(outer, text=f" {text} ", bg=W98['bg'], fg=W98['text'],
-             font=W98['font_bold']).pack(anchor=tk.W, padx=4)
-    inner = tk.Frame(outer, bg=W98['bg'], relief=tk.GROOVE, bd=2)
+    outer = w98_frame(parent, **kw)
+    w98_label(outer, text=f" {text} ", bold=True).pack(anchor=tk.W, padx=4)
+    inner = w98_frame(outer, relief=tk.GROOVE, bd=2)
     inner.pack(fill=tk.BOTH, expand=True, padx=4, pady=(0, 4))
     return outer, inner
 
 
-def w98_title_bar(parent, title, icon="🖥"):  # pasek tytułu
+def w98_title_bar(parent, title):  # pasek tytułu
     bar = tk.Frame(parent, bg=W98['title_bg'], height=20)
     bar.pack(fill=tk.X)
     bar.pack_propagate(False)
-    tk.Label(bar, text=f"  {icon}  {title}", bg=W98['title_bg'], fg=W98['title_fg'],
+    tk.Label(bar, text=f"{title}", bg=W98['title_bg'], fg=W98['title_fg'],
              font=W98['font_bold'], anchor=tk.W).pack(side=tk.LEFT, fill=tk.Y)
     return bar
 
 
-def w98_separator(parent): # poziomy separator
+def w98_separator(parent):  # poziomy separator
     tk.Frame(parent, bg=W98['bg_dark'], height=1).pack(fill=tk.X, pady=2)
     tk.Frame(parent, bg='white', height=1).pack(fill=tk.X)
 
@@ -99,35 +99,36 @@ def w98_separator(parent): # poziomy separator
 class W98Notebook:
     def __init__(self, parent):
         self.parent = parent
-        self.tabs = []
-        self.current = 0
+        self.tabs = []  # lista przechowująca zakładki.
+        self.current = 0  # numer aktualnie wybranej zakładki.
 
-        self.tab_bar = tk.Frame(parent, bg=W98['bg'])
+        self.tab_bar = w98_frame(parent)  # pasek z przyciskami zakładek.
         self.tab_bar.pack(fill=tk.X)
 
-        self.content_border = tk.Frame(parent, bg=W98['bg_dark'], bd=1, relief=tk.RAISED)
-        self.content_border.pack(fill=tk.BOTH, expand=True)
+        # ramka otaczająca zawartość
+        border = w98_frame(parent, bg=W98['bg_dark'], bd=1, relief=tk.RAISED)
+        border.pack(fill=tk.BOTH, expand=True)
 
-        self.content = tk.Frame(self.content_border, bg=W98['bg'])
-        self.content.pack(fill=tk.BOTH, expand=True, padx=1, pady=1)
+        # główny obszar wyświetlający zawartość
+        self.content = w98_frame(border, padx=1, pady=1)
+        self.content.pack(fill=tk.BOTH, expand=True)
 
-    def add(self, text):
+    def add(self, text):  # dodaje nową zakładkę
         idx = len(self.tabs)
-        frame = tk.Frame(self.content, bg=W98['bg'])
-        btn = tk.Button(
+        frame = w98_frame(self.content)
+        btn = w98_button(
             self.tab_bar, text=text,
-            font=W98['font'],
+            command=lambda i=idx: self.select(i),
             bg=W98['bg'] if idx == 0 else W98['bg_dark'],
-            fg=W98['text'],
             relief=tk.RAISED if idx == 0 else tk.FLAT,
-            bd=2, padx=6, pady=2,
-            command=lambda i=idx: self.select(i)
+            padx=6, pady=2
         )
         btn.pack(side=tk.LEFT, padx=(2 if idx == 0 else 0, 0), pady=(4, 0))
         self.tabs.append((text, frame, btn))
         if idx == 0:
             frame.pack(fill=tk.BOTH, expand=True)
         return frame
+
 
     def select(self, idx):
         if 0 <= idx < len(self.tabs):
@@ -188,7 +189,7 @@ class MLProjectGUI:
 
     def create_widgets(self):
         # ── Pasek tytułu aplikacji ────────────────────────────────────────
-        w98_title_bar(self.root, "Środowisko Eksperymentów ML — Projekt", icon="📊")
+        w98_title_bar(self.root, "Środowisko Eksperymentów ML — Projekt")
 
         # ── Menu bar (dekoracyjny) ────────────────────────────────────────
         menubar = tk.Frame(self.root, bg=W98['bg'], relief=tk.FLAT)
@@ -309,7 +310,7 @@ class MLProjectGUI:
         self.build_observations_tab(t6)
 
     def _build_tab_data(self, parent):
-        w98_title_bar(parent, "Informacje o wczytanym zbiorze danych", icon="📋")
+        w98_title_bar(parent, "Informacje o wczytanym zbiorze danych")
 
         info_f = tk.Frame(parent, bg=W98['bg'])
         info_f.pack(fill=tk.X, padx=8, pady=6)
@@ -353,7 +354,7 @@ class MLProjectGUI:
         self.class_chart_frame.master.pack(fill=tk.BOTH, expand=True, padx=8, pady=4)
 
     def _build_tab_branches(self, parent):
-        w98_title_bar(parent, "Zestawy cech — 3 gałęzie eksperymentów", icon="🌿")
+        w98_title_bar(parent, "Zestawy cech — 3 gałęzie eksperymentów")
 
         branches_f = tk.Frame(parent, bg=W98['bg'])
         branches_f.pack(fill=tk.BOTH, expand=True, padx=8, pady=6)
@@ -381,7 +382,7 @@ class MLProjectGUI:
         self.feat_chart_frame.master.pack(fill=tk.BOTH, expand=True, padx=8, pady=4)
 
     def _build_tab_table(self, parent):
-        w98_title_bar(parent, "Wyniki wszystkich eksperymentów", icon="📈")
+        w98_title_bar(parent, "Wyniki wszystkich eksperymentów")
 
         tbl_f = tk.Frame(parent, bg=W98['bg'])
         tbl_f.pack(fill=tk.BOTH, expand=True, padx=8, pady=6)
@@ -406,7 +407,7 @@ class MLProjectGUI:
         self.results_tree.tag_configure('branch3', background='#dde8ff')
 
     def _build_tab_results(self, parent):
-        w98_title_bar(parent, "Najlepszy model spośród wszystkich eksperymentów", icon="🏆")
+        w98_title_bar(parent, "Najlepszy model spośród wszystkich eksperymentów")
 
         mf = tk.Frame(parent, bg=W98['bg'])
         mf.pack(fill=tk.X, padx=8, pady=8)
@@ -431,7 +432,7 @@ class MLProjectGUI:
         self.cm_frame.master.pack(fill=tk.BOTH, expand=True, padx=8, pady=4)
 
     def build_observations_tab(self, parent):
-        w98_title_bar(parent, "Obserwacje i wnioski z eksperymentów", icon="📝")
+        w98_title_bar(parent, "Obserwacje i wnioski z eksperymentów")
 
         paned = tk.Frame(parent, bg=W98['bg'])
         paned.pack(fill=tk.BOTH, expand=True, padx=8, pady=6)
@@ -511,7 +512,7 @@ class MLProjectGUI:
         self.popup.grab_set()
         self.popup.resizable(False, False)
 
-        w98_title_bar(self.popup, "Wybierz kolumny do usunięcia", icon="🗂")
+        w98_title_bar(self.popup, "Wybierz kolumny do usunięcia")
 
         w98_label(self.popup,
                   "Zaznacz kolumny, które chcesz ZIGNOROWAĆ (usunąć).",
@@ -727,7 +728,7 @@ class MLProjectGUI:
         popup.resizable(False, False)
         popup.grab_set()
 
-        w98_title_bar(popup, "Konfiguracja eksperymentów", icon="⚙")
+        w98_title_bar(popup, "Konfiguracja eksperymentów")
 
         cf = tk.Frame(popup, bg=W98['bg'])
         cf.pack(fill=tk.BOTH, expand=True, padx=14, pady=10)
