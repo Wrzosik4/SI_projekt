@@ -1,0 +1,88 @@
+================================================================================
+  ŚRODOWISKO EKSPERYMENTÓW ML - MANUAL I DOKUMENTACJA SYSTEMOWA
+
+1. OPIS ZMIENNYCH I MIERNIKÓW JAKOŚCI (METRYK)
+--------------------------------------------------------------------------------
+* max_depth (Maksymalna głębokość):
+  Główny hiperparametr drzewa decyzyjnego. Określa limit poziomów (podziałów) 
+  drzewa. 
+  - Niska wartość (np. 1-3) upraszcza model, grożąc niedouczeniem (underfitting).
+  - Wysoka wartość pozwala dopasować się do detali, grożąc przeuczeniem (overfitting).
+
+* Accuracy (Dokładność):
+  Stosunek poprawnie sklasyfikowanych próbek do wszystkich próbek w zbiorze. 
+  Główna miara sukcesu, gdy klasy w zbiorze są zbalansowane.
+
+* Precision (Precyzja):
+  Miara mówiąca o tym, jak wiele z próbek wskazanych przez model jako pozytywne,
+  jest nimi w rzeczywistości. Kluczowa, gdy fałszywy alarm (False Positive) 
+  generuje duże koszty lub problemy.
+
+* Recall (Czułość / Pełność):
+  Zdolność modelu do wykrywania wszystkich rzeczywistych próbek danej klasy. 
+  Kluczowa w obszarach medycznych lub detekcji awarii, gdzie przeoczenie obiektu
+  pozytywnego (False Negative) ma poważne skutki.
+
+* F1-Score:
+  Średnia harmoniczna miar Precision i Recall. Daje obiektywny, zbalansowany obraz
+  skuteczności klasyfikatora w przypadku nierównego rozkładu klas (target balance).
+
+* Train Acc (Dokładność na zbiorze treningowym):
+  Wynik osiągany na danych, które model widział podczas nauki. Porównanie tej wartości
+  z Accuracy (testowym) pozwala wykryć, czy algorytm nie uczy się struktur na pamięć.
+
+* Overfit? (Przeuczenie):
+  Flaga ostrzegawcza (⚠ TAK). Zapala się automatycznie, gdy różnica między 
+  skutecznością treningową a testową przekracza 5% punktów procentowych.
+
+* CV Score (Walidacja krzyżowa 5-fold):
+  Uśredniony wynik dokładności wyznaczony poprzez 5-krotny niezależny podział 
+  danych. Gwarantuje stabilność oceny i chroni przed losowym "szczęśliwym podziałem" 
+  bazy testowej.
+
+
+2. ARCHITEKTURA GAŁĘZI EKSPERYMENTÓW (REDUKCJA WYMIAROWOŚCI)
+--------------------------------------------------------------------------------
+Aplikacja bada zachowanie algorytmu w trzech scenariuszach wyboru cech:
+* Gałąź 1: Model otrzymuje 100% dostępnych w bazie cech numerycznych.
+* Gałąź 2: Selekcja SelectKBest odrzuca najmniej powiązane zmienne, zostawiając 50%.
+* Gałąź 3: Ścisła selekcja zachowuje tylko 20% cech o najwyższym wyniku ANOVA F-value.
+
+
+3. INTERPRETACJA I DZIAŁANIE WYKRESÓW GRAFICZNYCH
+--------------------------------------------------------------------------------
+* Wykres "Rozkład klas" (Karta: Analiza Zbioru):
+  Wykres słupkowy prezentujący udziały procentowe klas decyzyjnych. Jeśli słupki 
+  są skrajnie nierówne, należy odrzucić miarę Accuracy na rzecz metryki F1-Score.
+
+* Wykres "Ważność cech — SelectKBest" (Karta: Konfiguracja Gałęzi):
+  Horyzontalny wykres słupkowy. Długość paska odzwierciedla wynik testu f_classif. 
+  Cechy z samej góry mają największy wpływ na poprawność predykcji.
+
+* Wykresy Liniowe Metryk (Karta: Wykresy Porównawcze):
+  Cztery górne wykresy ilustrują zachowanie miar Acc, Prec, Rec, F1 w funkcji głębokości 
+  drzewa. Pozwalają zaobserwować, od którego momentu parametry przestają rosnąć.
+
+* Wykres "Train vs Test Accuracy" (Karta: Wykresy Porównawcze):
+  Kluczowe narzędzie diagnostyczne. Linia ciągła (Test) zazwyczaj rośnie do pewnego 
+  punktu, po czym zaczyna opadać. Linia przerywana (Train) dąży do 100%. Moment, 
+  w którym linie zaczynają się od siebie drastycznie oddalać, to punkt krytyczny 
+  wejścia w strefę przeuczenia (Overfitting).
+
+* Wykres "Średnia Train vs Test per gałąź" (Karta: Wykresy Porównawcze):
+  Zbiorcze porównanie stabilności gałęzi. Pokazuje, czy redukcja cech (G2 i G3) 
+  zmniejszyła różnicę między nauką a testem, stabilizując działanie modelu.
+
+* Wykresy "Krzywa Uczenia" (Karta: Krzywa Uczenia):
+  - Lewy: Pokazuje spadek błędu i stabilizację metryk w miarę dopływu nowych 
+    wierszy danych do treningu. Czerwone pole obrazuje lukę przeuczenia.
+  - Prawy: Profiluje optymalne max_depth na wybranej gałęzi wskazując zieloną linią 
+    punkt maksymalnej efektywności testowej.
+
+* Wykres "Confusion Matrix" (Karta: Najlepszy Model):
+  Macierz pomyłek weryfikująca strukturę błędów. Ukątna (od lewego górnego do prawego 
+  dolnego rogu) grupuje trafienia bezbłędne. Pozostałe pola to błędy klasyfikacji.
+
+* Wykres "Wizualizacja Drzewa" (Karta: Najlepszy Model):
+  Rysunek struktury decyzyjnej do poziomu głębokości 3. Pozwala prześledzić kryteria 
+  oraz progi logiczne, jakimi kierował się zwycięski model podczas podziału danych.

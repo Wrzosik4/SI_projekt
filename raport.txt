@@ -1,6 +1,6 @@
-==============================
-  RAPORT
-==============================
+============================================================
+  RAPORT Z EKSPERYMENTÓW
+============================================================
 
 1. DANE
 ------------------------------
@@ -8,13 +8,13 @@ Rekordy: 17671
 Cechy startowe: 7
 Kolumna docelowa (cel): Stress_Level
 
-2. PARAMETRY/ZMIENNE 
+2. PARAMETRY STARTOWE
 ------------------------------
 Wykonanych eksperymentów: 30
 Kryterium podziału (criterion): gini
 Rozmiar zbioru testowego (test_size): 0.3
 
-3. WYNIK I OCENA SKUTECZNOŚCI
+3. WYNIK I OCENA NAJLEPSZEGO MODELU
 ------------------------------
 Struktura wejściowa: Gałąź 1
 Optymalny koszt (max_depth): 7
@@ -22,14 +22,15 @@ Accuracy:  79.71%
 Precision: 79.07%
 Recall:    79.71%
 F1-Score:  79.18%
+Overfit:   NIE
 
 4. WŁASNE SPOSTRZEŻENIA I WNIOSKI UŻYTKOWNIKA
 ------------------------------
 [Obserwacje]:
-a
+---
 
 [Wnioski na podstawie obserwacji]:
-a
+---
 
 [Wnioski końcowe]:
-a
+---
