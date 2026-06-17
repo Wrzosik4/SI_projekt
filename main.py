@@ -793,6 +793,7 @@ class MLProjectGUI:
             if r['nr'] == best_result['nr']:
                 tag = 'best'
             else:
+                tag = None
                 tag_map.get(r['branch'], 'branch1')
             self.results_tree.insert('', tk.END, tags=(tag,), values=(
                 r['nr'], r['branch'], r['depth'],
