@@ -1,8 +1,8 @@
 from theme import W98
 from widgets import (
     w98_label, w98_button, w98_entry, w98_listbox, w98_scrollbar,
-    w98_labelframe, w98_title_bar, w98_separator, w98_frame,
-    W98Notebook
+    w98_labelframe, w98_title_bar, w98_separator,
+    W98Notebook, W98Menubar
     )
 
 import tkinter as tk
@@ -23,134 +23,6 @@ import matplotlib.gridspec as gridspec
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 
-class W98Menubar:
-    def __init__(self, parent, app):
-        self.app = app
-        self.bar = w98_frame(parent, relief=tk.RAISED, bd=1)
-        self.bar.pack(fill=tk.X)
-        self._open_menu = None
-        self._build()
-
-    def _build(self):
-        menus = {
-            "Plik": [
-                ("Wczytaj CSV...", self.app.load_data),
-                ("Eksportuj wyniki CSV...", self.app.export_results_csv),
-                ("Eksportuj raport TXT...", self.app.export_observations_txt),
-                None,
-                ("Wyjdź", self.app.root.quit),
-            ],
-            "Widok": [
-                ("Analiza zbioru", lambda: self.app.notebook.select(0)),
-                ("Konfiguracja gałęzi", lambda: self.app.notebook.select(1)),
-                ("Tabela wyników", lambda: self.app.notebook.select(2)),
-                ("Wykresy porównawcze", lambda: self.app.notebook.select(3)),
-                ("Krzywa uczenia", lambda: self.app.notebook.select(4)),
-                ("Najlepszy model", lambda: self.app.notebook.select(5)),
-                ("Obserwacje i wnioski", lambda: self.app.notebook.select(6)),
-                ("Instrukcja i opis", lambda: self.app.notebook.select(7)),
-            ],
-            "Narzędzia": [
-                ("Analiza danych", self.app.analyze_data),
-                ("Wybór cech", self.app.select_features),
-                ("Uruchom eksperymenty...", self.app.ask_experiment_count),
-                None,
-                ("Wyczyść log", self.app.clear_log),
-            ],
-            "Pomoc": [
-                ("O programie", self._show_about),
-            ],
-        }
-
-        for name, items in menus.items():
-            btn = tk.Button(
-                self.bar, text=name, bg=W98['bg'], fg=W98['text'],
-                font=W98['font'], relief=tk.FLAT, bd=1, padx=6, pady=2,
-                activebackground=W98['title_bg'], activeforeground='white',
-                cursor='arrow')
-            btn.pack(side=tk.LEFT)
-            btn.bind("<Button-1>", lambda e, b=btn,
-                     i=items: self._toggle_menu(b, i))
-            btn.bind("<Enter>", lambda e, b=btn, i=items: self._on_hover(b, i))
-
-        self.app.root.bind("<Button-1>", self._close_on_click, add=True)
-
-    def _toggle_menu(self, btn, items):
-        self._close()
-        self._show_dropdown(btn, items)
-
-    def _on_hover(self, btn, items):
-        if self._open_menu:
-            self._close()
-            self._show_dropdown(btn, items)
-
-    def _show_dropdown(self, btn, items):
-        x = btn.winfo_rootx()
-        y = btn.winfo_rooty() + btn.winfo_height()
-
-        menu = tk.Toplevel(self.app.root)
-        menu.wm_overrideredirect(True)
-        menu.wm_geometry(f"+{x}+{y}")
-        menu.configure(bg=W98['bg'])
-        menu.attributes('-topmost', True)
-
-        outer = w98_frame(menu, bg=W98['bg_dark'], bd=1, relief=tk.SOLID)
-        outer.pack()
-        inner = w98_frame(outer, relief=tk.RAISED, bd=1)
-        inner.pack(fill=tk.BOTH, expand=True, padx=1, pady=1)
-
-        for item in items:
-            if item is None:
-                w98_frame(inner, bg=W98['bg_dark'], height=1).pack(fill=tk.X, padx=2, pady=1)
-                continue
-
-            label, cmd = item
-            row = w98_frame(inner, cursor='arrow')
-            row.pack(fill=tk.X)
-
-            lbl = w98_label(row, label, anchor=tk.W, padx=14, pady=3)
-            lbl.pack(fill=tk.X)
-
-            def bind_events(r, l, c):
-                for w in (r, l):
-                    w.bind("<Enter>", lambda e: (r.config(bg=W98['title_bg']),
-                                                 l.config(bg=W98['title_bg'],
-                                                          fg='white')))
-                    w.bind("<Leave>", lambda e: (r.config(bg=W98['bg']),
-                                                 l.config(bg=W98['bg'],
-                                                          fg=W98['text'])))
-                    w.bind("<Button-1>", lambda e: (self._close(), c()))
-
-            bind_events(row, lbl, cmd)
-        self._open_menu = menu
-
-    def _close(self):
-        if self._open_menu:
-            self._open_menu.destroy()
-            self._open_menu = None
-
-    def _close_on_click(self, event):
-        if self._open_menu and event.widget not in (self._open_menu,):
-            try:
-                if not str(event.widget).startswith(str(self._open_menu)):
-                    self._close()
-            except Exception:
-                self._close()
-
-    def _show_about(self):
-        win = tk.Toplevel(self.app.root)
-        win.title("O programie")
-        win.geometry("340x180")
-        win.configure(bg=W98['bg'])
-        win.resizable(False, False)
-        win.grab_set()
-        w98_title_bar(win, "O programie")
-        w98_label(win, "\nŚrodowisko Eksperymentów ML\n", font=W98['font_title']).pack()
-        w98_label(win, "DecisionTreeClassifier · scikit-learn\n"
-                       "SelectKBest · f_classif\n"
-                       "Obsługuje zbiory ≥1 mln rekordów").pack()
-
-        w98_button(win, "OK", win.destroy, width=10).pack(pady=10)
 # ═══════════════════════════════════════════════════════════════════════
 # GŁÓWNA KLASA APLIKACJI
 # ═══════════════════════════════════════════════════════════════════════
@@ -218,9 +90,10 @@ class MLProjectGUI:
 
         log_outer, log_inner = w98_labelframe(right, "Konsola / Log")
         log_outer.pack(fill=tk.X, pady=(2, 0))
-        self.console = tk.Text(log_inner, height=5, bg=W98['console_bg'], fg=W98['console_fg'],
-                               font=W98['font_mono'], relief=tk.SUNKEN, bd=1,
-                               insertbackground='white', state=tk.NORMAL)
+        self.console = tk.Text(
+            log_inner, height=5, bg=W98['console_bg'], fg=W98['console_fg'],
+            font=W98['font_mono'], relief=tk.SUNKEN, bd=1,
+            insertbackground='white', state=tk.NORMAL)
         csb = w98_scrollbar(log_inner, command=self.console.yview)
         csb.pack(side=tk.RIGHT, fill=tk.Y)
         self.console.configure(yscrollcommand=csb.set)
@@ -1048,6 +921,7 @@ Aplikacja bada zachowanie algorytmu w trzech scenariuszach wyboru cech:
                 f.write(f"[Obserwacje]:\n{obs if obs else '---'}\n\n[Wnioski na podstawie obserwacji]:\n{wn if wn else '---'}\n\n[Wnioski końcowe]:\n{end if end else '---'}\n")
             self.log(f"Zapisano szczegółowy raport do: {path}")
         except Exception as e: messagebox.showerror("Błąd", str(e))
+
 
 if __name__ == "__main__":
     root = tk.Tk()
