@@ -1,8 +1,9 @@
-from theme import W98
+from theme import W98, TTK_STYLES
 from widgets import (
     w98_label, w98_button, w98_entry, w98_listbox, w98_scrollbar,
-    w98_labelframe, w98_title_bar, w98_separator,
-    W98Notebook, W98Menubar
+    w98_labelframe, w98_title_bar, w98_separator, w98_frame,
+    W98Notebook, W98Menubar, w98_text_area, w98_treeview,
+    w98_scrolled_listbox
     )
 
 import tkinter as tk
@@ -40,7 +41,7 @@ class MLProjectGUI:
         self.all_results = []
         self.feature_scores = {}
         self._meta = {}
-        
+
         self.last_total_exp = "Brak"
         self.last_criterion = "Brak"
         self.last_test_size = "Brak"
@@ -49,28 +50,26 @@ class MLProjectGUI:
         self.create_widgets()
 
     def _apply_ttk_style(self):
-        style = ttk.Style()
-        style.theme_use('default')
-        style.configure("W98.Treeview", background=W98['bg_light'], foreground=W98['text'],
-                        rowheight=18, fieldbackground=W98['bg_light'], font=W98['font'])
-        style.configure("W98.Treeview.Heading", background=W98['bg'], foreground=W98['text'],
-                        font=W98['font_bold'], relief=tk.RAISED)
-        style.map("W98.Treeview", background=[('selected', W98['select_bg'])],
-                  foreground=[('selected', W98['select_fg'])])
-        style.configure("W98.Vertical.TScrollbar", background=W98['bg'])
-        style.configure("W98.Horizontal.TScrollbar", background=W98['bg'])
-        style.configure("W98.Horizontal.TProgressbar", troughcolor=W98['bg_light'],
-                        background=W98['title_bg'], thickness=14)
+        s = ttk.Style()
+        s.theme_use('default')
+
+        for name, kw in TTK_STYLES.items():
+            s.configure(name, **kw)
+
+        # mapowanie interakcji
+        s.map("W98.Treeview",
+              background=[('selected', W98['select_bg'])],
+              foreground=[('selected', W98['select_fg'])])
 
     def create_widgets(self):
         w98_title_bar(self.root, "Środowisko Eksperymentów ML — Projekt")
         self.menubar = W98Menubar(self.root, self)
         w98_separator(self.root)
 
-        main = tk.Frame(self.root, bg=W98['bg'])
+        main = w98_frame(self.root)
         main.pack(fill=tk.BOTH, expand=True, padx=4, pady=2)
 
-        self.sidebar = tk.Frame(main, bg=W98['bg'], width=200, relief=tk.GROOVE, bd=2)
+        self.sidebar = w98_frame(main, bg=W98['bg'], width=200, relief=tk.GROOVE, bd=2)
         self.sidebar.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 4))
         self.sidebar.pack_propagate(False)
 
@@ -208,13 +207,8 @@ class MLProjectGUI:
             col = tk.Frame(branches_f, bg=W98['bg'])
             col.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=4)
             w98_label(col, t, bold=True).pack(anchor=tk.W, pady=(0, 2))
-            box_f = tk.Frame(col, bg=W98['bg'], relief=tk.SUNKEN, bd=2)
+            box_f, lb = w98_scrolled_listbox(col)
             box_f.pack(fill=tk.BOTH, expand=True)
-            sb = w98_scrollbar(box_f)
-            sb.pack(side=tk.RIGHT, fill=tk.Y)
-            lb = w98_listbox(box_f, yscrollcommand=sb.set)
-            lb.pack(fill=tk.BOTH, expand=True)
-            sb.config(command=lb.yview)
             self.listboxes.append(lb)
 
         _, self.feat_chart_frame = w98_labelframe(parent, "Ważność cech — SelectKBest (f_classif score)")
@@ -226,16 +220,12 @@ class MLProjectGUI:
         tbl_f.pack(fill=tk.BOTH, expand=True, padx=8, pady=6)
 
         cols = ("Nr", "Gałąź", "max_depth", "Accuracy", "Precision", "Recall", "F1", "Train Acc", "Overfit?")
-        self.results_tree = ttk.Treeview(tbl_f, columns=cols, show='headings', style="W98.Treeview", height=25)
+        tree_frame, self.results_tree = w98_treeview(tbl_f, height=25, columns=cols, show='headings')
+        tree_frame.pack(fill=tk.BOTH, expand=True)
         widths = [35, 150, 75, 85, 85, 85, 85, 85, 75]
         for c, w in zip(cols, widths):
             self.results_tree.heading(c, text=c)
             self.results_tree.column(c, width=w, anchor=tk.CENTER)
-
-        vsb = ttk.Scrollbar(tbl_f, orient=tk.VERTICAL, command=self.results_tree.yview, style="W98.Vertical.TScrollbar")
-        self.results_tree.configure(yscrollcommand=vsb.set)
-        vsb.pack(side=tk.RIGHT, fill=tk.Y)
-        self.results_tree.pack(fill=tk.BOTH, expand=True)
 
         self.results_tree.tag_configure('best', background='#00ff00', foreground='#000080')
         self.results_tree.tag_configure('overfit', background='#ffdddd')
@@ -294,58 +284,23 @@ class MLProjectGUI:
         ]
         for caption, attr in sections:
             w98_label(right, caption, bold=True).pack(anchor=tk.W, pady=(6, 1))
-            f = tk.Frame(right, bg=W98['bg_light'], relief=tk.SUNKEN, bd=2)
+            f, txt = w98_text_area(right, height=5, bg=W98['bg_light'], wrap=tk.WORD)
             f.pack(fill=tk.BOTH, expand=True)
-            sb2 = w98_scrollbar(f)
-            sb2.pack(side=tk.RIGHT, fill=tk.Y)
-            txt = tk.Text(f, bg=W98['bg_light'], fg=W98['text'], font=W98['font'], wrap=tk.WORD, 
-                          height=5, relief=tk.FLAT, yscrollcommand=sb2.set)
-            sb2.config(command=txt.yview)
-            txt.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
             setattr(self, attr, txt)
 
     def _build_tab_instruction(self, parent):
-        w98_title_bar(parent, "Instrukcja obsługi środowiska i interpretacji wyników",)
-        f = tk.Frame(parent, bg=W98['bg_light'], relief=tk.SUNKEN, bd=2)
+        w98_title_bar(parent, "Instrukcja obsługi środowiska i interpretacji wyników")
+        f, txt = w98_text_area(parent, mono=True, bg=W98['bg_light'], wrap=tk.WORD)
         f.pack(fill=tk.BOTH, expand=True, padx=8, pady=8)
-        sb = w98_scrollbar(f)
-        sb.pack(side=tk.RIGHT, fill=tk.Y)
-        txt = tk.Text(f, bg=W98['bg_light'], fg=W98['text'], font=W98['font_mono'], wrap=tk.WORD, relief=tk.FLAT, yscrollcommand=sb.set)
-        sb.config(command=txt.yview)
-        txt.pack(fill=tk.BOTH, expand=True, padx=6, pady=6)
-        instrukcja_tresc = """================================================================================
-  ŚRODOWISKO EKSPERYMENTÓW ML - MANUAL I DOKUMENTACJA SYSTEMOWA
-================================================================================
+        
+        try:
+            with open("instrukcja.txt", "r", encoding="utf-8") as file:
+                instrukcja_tresc = file.read()
+        except FileNotFoundError:
+            instrukcja_tresc = "BŁĄD: Nie znaleziono pliku 'instrukcja.txt'.\nUpewnij się, że plik znajduje się w tym samym folderze co aplikacja."
+        except Exception as e:
+            instrukcja_tresc = f"BŁĄD: Nie można wczytać instrukcji.\nSzczegóły: {str(e)}"
 
-1. OPIS ZMIENNYCH I MIERNIKÓW JAKOŚCI (METRYK)
---------------------------------------------------------------------------------
-* max_depth (Maksymalna głębokość):
-  Główny hiperparametr drzewa decyzyjnego. Określa limit poziomów (podziałów) 
-  drzewa. 
-  - Niska wartość (np. 1-3) upraszcza model, grożąc niedouczeniem (underfitting).
-  - Wysoka wartość pozwala dopasować się do detali, grożąc przeuczeniem (overfitting).
-
-* Accuracy (Dokładność):
-  Stosunek poprawnie sklasyfikowanych próbek do wszystkich próbek w zbiorze. 
-
-* Precision (Precyzja) / Recall (Czułość) / F1-Score:
-  Kluczowe miary w przypadku nierównego rozkładu klas. 
-
-* Train Acc (Dokładność na zbiorze treningowym) & Overfit?:
-  Wynik osiągany na danych uczących. Flaga ostrzegawcza (⚠ TAK) zapala się automatycznie, gdy 
-  różnica między skutecznością treningową a testową przekracza 5% punktów procentowych.
-
-* CV Score (Walidacja krzyżowa 5-fold):
-  Uśredniony wynik dokładności wyznaczony poprzez 5-krotny niezależny podział 
-  danych. Gwarantuje stabilność oceny.
-
-2. ARCHITEKTURA GAŁĘZI EKSPERYMENTÓW (REDUKCJA WYMIAROWOŚCI)
---------------------------------------------------------------------------------
-Aplikacja bada zachowanie algorytmu w trzech scenariuszach wyboru cech:
-* Gałąź 1: Model otrzymuje 100% dostępnych w bazie cech numerycznych.
-* Gałąź 2: Selekcja SelectKBest odrzuca najmniej powiązane zmienne, zostawiając 50%.
-* Gałąź 3: Ścisła selekcja zachowuje tylko 20% cech o najwyższym wyniku ANOVA F-value.
-================================================================================"""
         txt.insert(tk.END, instrukcja_tresc)
         txt.config(state=tk.DISABLED)
 

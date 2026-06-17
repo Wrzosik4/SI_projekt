@@ -31,3 +31,17 @@ STYLES = {
     'text':    {'bg': W98['bg_light'], 'fg': W98['text'], 'font': W98['font'],
                 'relief': tk.FLAT, 'insertbackground': W98['text']}
 }
+
+
+TTK_STYLES = {
+    "W98.Treeview": dict(
+        background=W98['bg_light'], fieldbackground=W98['bg_light'],
+        foreground=W98['text'], font=W98['font'], rowheight=18),
+    "W98.Treeview.Heading": dict(
+        background=W98['bg'], foreground=W98['text'],
+        font=W98['font_bold'], relief='raised'),
+    "W98.Horizontal.TProgressbar": dict(
+        troughcolor=W98['bg_light'], background=W98['title_bg'], thickness=14),
+    "W98.Vertical.TScrollbar": dict(background=W98['bg']),
+    "W98.Horizontal.TScrollbar": dict(background=W98['bg'])
+}
