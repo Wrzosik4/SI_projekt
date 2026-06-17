@@ -1,7 +1,9 @@
 from theme import W98
 from widgets import (
     w98_label, w98_button, w98_entry, w98_listbox, w98_scrollbar,
-    w98_labelframe, w98_title_bar, w98_separator, w98_frame)
+    w98_labelframe, w98_title_bar, w98_separator, w98_frame,
+    W98Notebook
+    )
 
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
@@ -21,50 +23,10 @@ import matplotlib.gridspec as gridspec
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
 
-class W98Notebook:
-    def __init__(self, parent):
-        self.parent = parent
-        self.tabs = []
-        self.current = 0
-
-        self.tab_bar = w98_frame(parent)
-        self.tab_bar.pack(fill=tk.X)
-
-        self.content_border = w98_frame(parent, bg=W98['bg_dark'], bd=1, relief=tk.RAISED)
-        self.content_border.pack(fill=tk.BOTH, expand=True)
-
-        self.content = w98_frame(self.content_border)
-        self.content.pack(fill=tk.BOTH, expand=True, padx=1, pady=1)
-
-    def add(self, text):
-        idx = len(self.tabs)
-        frame = tk.Frame(self.content, bg=W98['bg'])
-        btn = tk.Button(
-            self.tab_bar, text=text, font=W98['font'],
-            bg=W98['bg'] if idx == 0 else W98['bg_dark'],
-            fg=W98['text'], relief=tk.RAISED if idx == 0 else tk.FLAT,
-            bd=2, padx=6, pady=2, command=lambda i=idx: self.select(i))
-        btn.pack(side=tk.LEFT, padx=(2 if idx == 0 else 0, 0), pady=(4, 0))
-        self.tabs.append((text, frame, btn))
-        if idx == 0:
-            frame.pack(fill=tk.BOTH, expand=True)
-        return frame
-
-    def select(self, idx):
-        if 0 <= idx < len(self.tabs):
-            _, old_frame, old_btn = self.tabs[self.current]
-            old_frame.pack_forget()
-            old_btn.config(bg=W98['bg_dark'], relief=tk.FLAT)
-            self.current = idx
-            _, new_frame, new_btn = self.tabs[idx]
-            new_frame.pack(fill=tk.BOTH, expand=True)
-            new_btn.config(bg=W98['bg'], relief=tk.RAISED)
-
-
 class W98Menubar:
     def __init__(self, parent, app):
         self.app = app
-        self.bar = tk.Frame(parent, bg=W98['bg'], relief=tk.RAISED, bd=1)
+        self.bar = w98_frame(parent, relief=tk.RAISED, bd=1)
         self.bar.pack(fill=tk.X)
         self._open_menu = None
         self._build()
@@ -104,66 +66,62 @@ class W98Menubar:
             btn = tk.Button(
                 self.bar, text=name, bg=W98['bg'], fg=W98['text'],
                 font=W98['font'], relief=tk.FLAT, bd=1, padx=6, pady=2,
-                activebackground=W98['title_bg'], activeforeground='white', cursor='arrow')
+                activebackground=W98['title_bg'], activeforeground='white',
+                cursor='arrow')
             btn.pack(side=tk.LEFT)
-            btn.bind("<Button-1>", lambda e, b=btn, i=items: self._toggle_menu(b, i))
+            btn.bind("<Button-1>", lambda e, b=btn,
+                     i=items: self._toggle_menu(b, i))
             btn.bind("<Enter>", lambda e, b=btn, i=items: self._on_hover(b, i))
 
         self.app.root.bind("<Button-1>", self._close_on_click, add=True)
 
     def _toggle_menu(self, btn, items):
-        if self._open_menu:
-            self._open_menu.destroy()
-            self._open_menu = None
+        self._close()
         self._show_dropdown(btn, items)
 
     def _on_hover(self, btn, items):
         if self._open_menu:
-            self._open_menu.destroy()
-            self._open_menu = None
+            self._close()
             self._show_dropdown(btn, items)
 
     def _show_dropdown(self, btn, items):
         x = btn.winfo_rootx()
         y = btn.winfo_rooty() + btn.winfo_height()
+
         menu = tk.Toplevel(self.app.root)
         menu.wm_overrideredirect(True)
         menu.wm_geometry(f"+{x}+{y}")
         menu.configure(bg=W98['bg'])
         menu.attributes('-topmost', True)
 
-        outer = tk.Frame(menu, bg=W98['bg_dark'], bd=1, relief=tk.SOLID)
+        outer = w98_frame(menu, bg=W98['bg_dark'], bd=1, relief=tk.SOLID)
         outer.pack()
-        inner = tk.Frame(outer, bg=W98['bg'], relief=tk.RAISED, bd=1)
+        inner = w98_frame(outer, relief=tk.RAISED, bd=1)
         inner.pack(fill=tk.BOTH, expand=True, padx=1, pady=1)
 
         for item in items:
             if item is None:
-                tk.Frame(inner, bg=W98['bg_dark'], height=1).pack(fill=tk.X, padx=2, pady=1)
-            else:
-                label, cmd = item
-                row = tk.Frame(inner, bg=W98['bg'], cursor='arrow')
-                row.pack(fill=tk.X)
-                lbl = tk.Label(row, text=label, bg=W98['bg'], fg=W98['text'],
-                               font=W98['font'], anchor=tk.W, padx=14, pady=3)
-                lbl.pack(fill=tk.X)
+                w98_frame(inner, bg=W98['bg_dark'], height=1).pack(fill=tk.X, padx=2, pady=1)
+                continue
 
-                def _on_enter(e, r=row, l=lbl):
-                    r.config(bg=W98['title_bg'])
-                    l.config(bg=W98['title_bg'], fg='white')
+            label, cmd = item
+            row = w98_frame(inner, cursor='arrow')
+            row.pack(fill=tk.X)
 
-                def _on_leave(e, r=row, l=lbl):
-                    r.config(bg=W98['bg'])
-                    l.config(bg=W98['bg'], fg=W98['text'])
+            lbl = w98_label(row, label, anchor=tk.W, padx=14, pady=3)
+            lbl.pack(fill=tk.X)
 
-                def _on_click(e, c=cmd):
-                    self._close()
-                    c()
+            def bind_events(r, l, c):
+                for w in (r, l):
+                    w.bind("<Enter>", lambda e: (r.config(bg=W98['title_bg']),
+                                                 l.config(bg=W98['title_bg'],
+                                                          fg='white')))
+                    w.bind("<Leave>", lambda e: (r.config(bg=W98['bg']),
+                                                 l.config(bg=W98['bg'],
+                                                          fg=W98['text'])))
+                    w.bind("<Button-1>", lambda e: (self._close(), c()))
 
-                for w in (row, lbl):
-                    w.bind("<Enter>", _on_enter)
-                    w.bind("<Leave>", _on_leave)
-                    w.bind("<Button-1>", _on_click)
+            bind_events(row, lbl, cmd)
         self._open_menu = menu
 
     def _close(self):
@@ -187,15 +145,12 @@ class W98Menubar:
         win.resizable(False, False)
         win.grab_set()
         w98_title_bar(win, "O programie")
-        tk.Label(win, text="\nŚrodowisko Eksperymentów ML\n",
-                 bg=W98['bg'], fg=W98['text'], font=W98['font_title']).pack()
-        tk.Label(win, text="DecisionTreeClassifier · scikit-learn\n"
-                           "SelectKBest · f_classif\n"
-                           "Obsługuje zbiory ≥1 mln rekordów",
-                 bg=W98['bg'], fg=W98['text'], font=W98['font']).pack()
+        w98_label(win, "\nŚrodowisko Eksperymentów ML\n", font=W98['font_title']).pack()
+        w98_label(win, "DecisionTreeClassifier · scikit-learn\n"
+                       "SelectKBest · f_classif\n"
+                       "Obsługuje zbiory ≥1 mln rekordów").pack()
+
         w98_button(win, "OK", win.destroy, width=10).pack(pady=10)
-
-
 # ═══════════════════════════════════════════════════════════════════════
 # GŁÓWNA KLASA APLIKACJI
 # ═══════════════════════════════════════════════════════════════════════

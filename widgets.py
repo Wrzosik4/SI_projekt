@@ -14,9 +14,19 @@ def w98_label(parent, text, bold=False, **kw):  # etykieta
     return tk.Label(parent, text=text, **{**style, **kw})
 
 
-def w98_button(parent, text, command, **kw):  # przycisk
-    return tk.Button(parent, text=text, command=command,
-                     **{**STYLES['button'], **kw})
+def w98_button(parent, text, command, width=None, **kw):
+    # domyślne wartości, które można nadpisać przez **kw
+    bg_color = kw.pop('bg', W98['btn_bg'])
+    relief_type = kw.pop('relief', tk.RAISED)
+
+    btn = tk.Button(
+        parent, text=text, command=command,
+        bg=bg_color, fg=W98['text'], font=W98['font'],
+        relief=relief_type, bd=2,
+        activebackground=W98['btn_active'], activeforeground=W98['text'],
+        cursor='arrow',
+        **({} if width is None else {'width': width}), **kw)
+    return btn
 
 
 def w98_entry(parent, **kw):  # pole tekstowe
@@ -96,3 +106,54 @@ def w98_scrolled_listbox(parent, **kw):
     sb.config(command=lb.yview)
 
     return frame, lb
+
+
+class W98Notebook:
+    def __init__(self, parent):
+        self.parent = parent
+        self.tabs = []
+        self.current = 0
+
+        self.tab_bar = w98_frame(parent)
+        self.tab_bar.pack(fill=tk.X)
+
+        self.content_border = w98_frame(parent, bg=W98['bg_dark'],
+                                        bd=1, relief=tk.RAISED)
+        self.content_border.pack(fill=tk.BOTH, expand=True)
+
+        self.content = w98_frame(self.content_border)
+        self.content.pack(fill=tk.BOTH, expand=True, padx=1, pady=1)
+
+    def add(self, text):
+        idx = len(self.tabs)
+        is_first = (idx == 0)
+
+        frame = w98_frame(self.content)
+
+        btn = w98_button(
+            self.tab_bar, text=text,
+            padx=6, pady=2,
+            bg=W98['bg'] if is_first else W98['bg_dark'],
+            relief=tk.RAISED if is_first else tk.FLAT,
+            command=lambda i=idx: self.select(i)
+        )
+        btn.pack(side=tk.LEFT, padx=(2 if is_first else 0, 0), pady=(4, 0))
+
+        self.tabs.append((text, frame, btn))
+
+        if is_first:
+            frame.pack(fill=tk.BOTH, expand=True)
+        return frame
+
+    def select(self, idx):
+        if idx == self.current or not (0 <= idx < len(self.tabs)):
+            return
+        _, old_frame, old_btn = self.tabs[self.current]
+        old_frame.pack_forget()
+        old_btn.config(bg=W98['bg_dark'], relief=tk.FLAT)
+
+        self.current = idx
+
+        _, new_frame, new_btn = self.tabs[idx]
+        new_frame.pack(fill=tk.BOTH, expand=True)
+        new_btn.config(bg=W98['bg'], relief=tk.RAISED)
