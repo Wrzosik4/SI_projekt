@@ -28,7 +28,39 @@ from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 # GŁÓWNA KLASA APLIKACJI
 # ═══════════════════════════════════════════════════════════════════════
 class MLProjectGUI:
+    """
+    Główna klasa aplikacji graficznej do eksperymentów ML.
+
+    Zarządza całym interfejsem użytkownika (Tkinter) oraz logiką:
+    wczytywania danych, analizy, selekcji cech, uruchamiania
+    eksperymentów z DecisionTreeClassifier i eksportu wyników.
+
+    Atrybuty:
+        root (tk.Tk): Główne okno aplikacji.
+        df (pd.DataFrame): Wczytany i przetworzony zbiór danych.
+        temp_raw_df (pd.DataFrame): Tymczasowy surowy DataFrame przed filtrowaniem kolumn.
+        branches (dict): Słownik {nazwa_gałęzi: lista_cech} dla 3 gałęzi eksperymentów.
+        all_results (list): Lista słowników z wynikami wszystkich eksperymentów.
+        feature_scores (dict): Słownik {nazwa_cechy: score} z wynikami SelectKBest.
+        _meta (dict): Metadane wczytanego zbioru (rekordy, cechy, target, braki).
+        last_total_exp (int|str): Liczba wykonanych eksperymentów (do raportu).
+        last_criterion (str): Użyte kryterium drzewa (do raportu).
+        last_test_size (float|str): Użyty rozmiar zbioru testowego (do raportu).
+    """
+
     def __init__(self, root):
+        """
+        Inicjalizuje główne okno aplikacji i wszystkie zmienne stanu.
+
+        Kroki:
+            1. Konfiguruje okno Tk (tytuł, rozmiar, kolor tła).
+            2. Inicjalizuje zmienne stanu (df, branches, results itp.).
+            3. Aplikuje style TTK (motyw Windows 98).
+            4. Buduje wszystkie widgety interfejsu.
+
+        Args:
+            root (tk.Tk): Główne okno Tkinter przekazane z bloku __main__.
+        """
         self.root = root
         self.root.title("Środowisko Eksperymentów ML")
         self.root.geometry("1280x860")
@@ -50,6 +82,14 @@ class MLProjectGUI:
         self.create_widgets()
 
     def _apply_ttk_style(self):
+        """
+        Aplikuje motyw wizualny Windows 98 do wszystkich widgetów TTK.
+
+        Kroki:
+            1. Ustawia bazowy motyw TTK na 'default'.
+            2. Iteruje po słowniku TTK_STYLES i konfiguruje każdy styl.
+            3. Dodaje mapowanie kolorów zaznaczenia dla Treeview (select_bg/fg).
+        """
         s = ttk.Style()
         s.theme_use('default')
 
@@ -62,6 +102,18 @@ class MLProjectGUI:
               foreground=[('selected', W98['select_fg'])])
 
     def create_widgets(self):
+        """
+        Buduje główny układ interfejsu użytkownika.
+
+        Kroki:
+            1. Tworzy pasek tytułu i menu.
+            2. Buduje główny kontener (main frame) z podziałem na sidebar i obszar prawy.
+            3. Tworzy notebook (zakładki) w obszarze prawym.
+            4. Dodaje pasek postępu i etykietę postępu.
+            5. Dodaje konsolę/log na dole prawego obszaru.
+            6. Wywołuje build_sidebar() i build_tabs().
+            7. Dodaje pasek statusu na samym dole okna.
+        """
         w98_title_bar(self.root, "Środowisko Eksperymentów ML — Projekt")
         self.menubar = W98Menubar(self.root, self)
         w98_separator(self.root)
@@ -108,15 +160,37 @@ class MLProjectGUI:
         self.log("System gotowy. Oczekuję na wczytanie danych...")
 
     def set_status(self, text):
+        """
+        Aktualizuje tekst paska statusu na dole okna i odświeża UI.
+
+        Args:
+            text (str): Tekst do wyświetlenia w pasku statusu.
+        """
         self.statusbar.config(text=f"  {text}")
         self.root.update()
 
     def set_progress(self, value, label=""):
+        """
+        Ustawia wartość paska postępu i etykietę opisową.
+
+        Args:
+            value (float): Wartość postępu w zakresie 0–100.
+            label (str): Opcjonalny tekst wyświetlany obok paska (domyślnie pusty).
+        """
         self.progress_var.set(value)
         self.progress_lbl.config(text=label)
         self.root.update()
 
     def build_sidebar(self):
+        """
+        Buduje lewy panel boczny (sidebar) z przyciskami kroków i eksportu.
+
+        Kroki:
+            1. Tworzy nagłówek sidebaru z tytułem.
+            2. Dodaje 4 przyciski kroków: Wczytaj, Analiza, Wybór cech, Eksperymenty.
+            3. Dodaje separator i sekcję eksportu (CSV, TXT).
+            4. Dodaje stopkę z informacją o algorytmie.
+        """
         hdr = tk.Frame(self.sidebar, bg=W98['title_bg'])
         hdr.pack(fill=tk.X)
         tk.Label(hdr, text="  📁 ML Eksperymenty", bg=W98['title_bg'], fg='white',
@@ -147,6 +221,19 @@ class MLProjectGUI:
                  bg=W98['bg'], fg=W98['disabled'], font=('Courier New', 7), justify=tk.CENTER).pack(pady=4)
 
     def build_tabs(self):
+        """
+        Tworzy i rejestruje wszystkie zakładki notebooka.
+
+        Zakładki (w kolejności):
+            0. Analiza Zbioru       — _build_tab_data()
+            1. Konfiguracja Gałęzi  — _build_tab_branches()
+            2. Tabela Wyników       — _build_tab_table()
+            3. Wykresy Porównawcze  — pusty frame (wypełniany przez _draw_comparison_charts)
+            4. Krzywa Uczenia       — pusty frame (wypełniany przez _draw_learning_curve)
+            5. Najlepszy Model      — _build_tab_results()
+            6. Obserwacje i Wnioski — build_observations_tab()
+            7. Instrukcja           — _build_tab_instruction()
+        """
         self._build_tab_data(self.notebook.add("Analiza Zbioru"))
         self._build_tab_branches(self.notebook.add("Konfiguracja Gałęzi"))
         self._build_tab_table(self.notebook.add("Tabela Wyników"))
@@ -164,6 +251,17 @@ class MLProjectGUI:
         self._build_tab_instruction(self.notebook.add("Instrukcja"))
 
     def _build_tab_data(self, parent):
+        """
+        Buduje zakładkę 'Analiza Zbioru' z informacjami o danych i statystykami.
+
+        Kroki:
+            1. Tworzy siatkę etykiet z metadanymi (rekordy, cechy, typy, braki, klasy, target).
+            2. Dodaje Treeview ze statystykami opisowymi cech (mean, std, min, percentyle, max).
+            3. Rezerwuje ramkę na wykres słupkowy rozkładu klas (self.class_chart_frame).
+
+        Args:
+            parent (tk.Frame): Ramka zakładki przekazana przez notebook.add().
+        """
         w98_title_bar(parent, "Informacje o wczytanym zbiorze danych")
         info_f = tk.Frame(parent, bg=W98['bg'])
         info_f.pack(fill=tk.X, padx=8, pady=6)
@@ -197,6 +295,16 @@ class MLProjectGUI:
         self.class_chart_frame.master.pack(fill=tk.BOTH, expand=True, padx=8, pady=4)
 
     def _build_tab_branches(self, parent):
+        """
+        Buduje zakładkę 'Konfiguracja Gałęzi' z listboxami cech i wykresem ważności.
+
+        Kroki:
+            1. Tworzy 3 kolumny obok siebie, każda z tytułem i listboxem (self.listboxes[0..2]).
+            2. Rezerwuje ramkę na poziomy wykres słupkowy ważności cech (self.feat_chart_frame).
+
+        Args:
+            parent (tk.Frame): Ramka zakładki przekazana przez notebook.add().
+        """
         w98_title_bar(parent, "Zestawy cech — 3 gałęzie eksperymentów")
         branches_f = tk.Frame(parent, bg=W98['bg'])
         branches_f.pack(fill=tk.BOTH, expand=True, padx=8, pady=6)
@@ -215,6 +323,20 @@ class MLProjectGUI:
         self.feat_chart_frame.master.pack(fill=tk.BOTH, expand=True, padx=8, pady=4)
 
     def _build_tab_table(self, parent):
+        """
+        Buduje zakładkę 'Tabela Wyników' z Treeview wyników eksperymentów.
+
+        Kroki:
+            1. Definiuje kolumny tabeli (Nr, Gałąź, max_depth, metryki, Overfit).
+            2. Tworzy Treeview z paskami przewijania (self.results_tree).
+            3. Ustawia szerokości kolumn i konfiguruje tagi kolorystyczne:
+               - 'best'    → zielone tło (najlepszy wynik)
+               - 'overfit' → czerwonawe tło
+               - 'branch1/2/3' → naprzemienne szarości/niebieski
+
+        Args:
+            parent (tk.Frame): Ramka zakładki przekazana przez notebook.add().
+        """
         w98_title_bar(parent, "Wyniki wszystkich eksperymentów")
         tbl_f = tk.Frame(parent, bg=W98['bg'])
         tbl_f.pack(fill=tk.BOTH, expand=True, padx=8, pady=6)
@@ -234,6 +356,17 @@ class MLProjectGUI:
         self.results_tree.tag_configure('branch3', background='#dde8ff')
 
     def _build_tab_results(self, parent):
+        """
+        Buduje zakładkę 'Najlepszy Model' z etykietami metryk i miejscem na wykresy.
+
+        Kroki:
+            1. Tworzy wiersz etykiet na metryki (Accuracy, Precision, Recall, F1, CV).
+            2. Rezerwuje ramkę self.cm_frame na macierz pomyłek (lewa strona).
+            3. Rezerwuje ramkę self.tree_frame na wizualizację drzewa (prawa strona).
+
+        Args:
+            parent (tk.Frame): Ramka zakładki przekazana przez notebook.add().
+        """
         w98_title_bar(parent, "Najlepszy model spośród wszystkich eksperymentów")
         mf = tk.Frame(parent, bg=W98['bg'])
         mf.pack(fill=tk.X, padx=8, pady=8)
@@ -259,6 +392,20 @@ class MLProjectGUI:
         self.tree_frame.master.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
     def build_observations_tab(self, parent):
+        """
+        Buduje zakładkę 'Obserwacje i Wnioski' z polem auto-raportu i polami tekstowymi.
+
+        Kroki:
+            1. Lewa strona: pole tekstowe tylko do odczytu (self.auto_obs_text)
+               na automatycznie generowane spostrzeżenia (zielony tekst na czarnym tle).
+            2. Prawa strona: 3 edytowalne pola tekstowe:
+               - self.obs_text  — obserwacje użytkownika
+               - self.wn_text   — wnioski na podstawie obserwacji
+               - self.end_text  — wnioski końcowe do projektu
+
+        Args:
+            parent (tk.Frame): Ramka zakładki przekazana przez notebook.add().
+        """
         w98_title_bar(parent, "Obserwacje i wnioski z eksperymentów")
         paned = tk.Frame(parent, bg=W98['bg'])
         paned.pack(fill=tk.BOTH, expand=True, padx=8, pady=6)
@@ -289,6 +436,17 @@ class MLProjectGUI:
             setattr(self, attr, txt)
 
     def _build_tab_instruction(self, parent):
+        """
+        Buduje zakładkę 'Instrukcja' z treścią wczytaną z pliku instrukcja.txt.
+
+        Kroki:
+            1. Próbuje otworzyć i wczytać plik 'instrukcja.txt' (UTF-8).
+            2. W razie braku pliku lub błędu — wstawia komunikat o błędzie.
+            3. Wstawia treść do pola tekstowego tylko do odczytu (czcionka mono).
+
+        Args:
+            parent (tk.Frame): Ramka zakładki przekazana przez notebook.add().
+        """
         w98_title_bar(parent, "Instrukcja obsługi środowiska i interpretacji wyników")
         f, txt = w98_text_area(parent, mono=True, bg=W98['bg_light'], wrap=tk.WORD)
         f.pack(fill=tk.BOTH, expand=True, padx=8, pady=8)
@@ -308,12 +466,19 @@ class MLProjectGUI:
     # LOG
     # ─────────────────────────────────────────────────────────────────────
     def log(self, message):
+        """
+        Dopisuje wiadomość do konsoli/logu i przewija widok na koniec.
+
+        Args:
+            message (str): Tekst do wyświetlenia w konsoli (poprzedzony znakiem '>').
+        """
         self.console.config(state=tk.NORMAL)
         self.console.insert(tk.END, f"> {message}\n")
         self.console.see(tk.END)
         self.root.update()
 
     def clear_log(self):
+        """Czyści całą zawartość konsoli/logu."""
         self.console.config(state=tk.NORMAL)
         self.console.delete('1.0', tk.END)
 
@@ -321,6 +486,16 @@ class MLProjectGUI:
     # WCZYTYWANIE DANYCH
     # ─────────────────────────────────────────────────────────────────────
     def load_data(self):
+        """
+        Otwiera dialog wyboru pliku CSV i wczytuje go do temp_raw_df.
+
+        Kroki:
+            1. Wyświetla dialog filedialog do wyboru pliku .csv.
+            2. Wczytuje plik przez pd.read_csv() do self.temp_raw_df.
+            3. Loguje liczbę wierszy i kolumn.
+            4. Wywołuje show_column_selector() do wyboru kolumn.
+            5. W razie błędu — pokazuje messagebox i loguje wyjątek.
+        """
         filepath = filedialog.askopenfilename(filetypes=[("CSV Files", "*.csv")])
         if not filepath: return
         self.set_status(f"Wczytywanie: {filepath}")
@@ -334,6 +509,18 @@ class MLProjectGUI:
             self.log(f"Błąd: {e}")
 
     def show_column_selector(self):
+        """
+        Wyświetla modalne okno popup do wyboru kolumn do usunięcia ze zbioru.
+
+        Kroki:
+            1. Tworzy okno Toplevel z grab_set() (blokuje główne okno).
+            2. Wypełnia listbox wszystkimi kolumnami z temp_raw_df.
+            3. Użytkownik zaznacza kolumny do ZIGNOROWANIA (multi-select).
+            4. Przyciski: Zatwierdź → apply_column_selection(), Anuluj → _cancel_load().
+
+        Uwaga:
+            Ostatnia niezaznaczona kolumna staje się kolumną docelową (target).
+        """
         self.popup = tk.Toplevel(self.root)
         self.popup.title("Zarządzanie Kolumnami")
         self.popup.geometry("460x500")
@@ -362,12 +549,26 @@ class MLProjectGUI:
         w98_button(bf, "✖  Anuluj", self._cancel_load, width=16).pack(side=tk.LEFT)
 
     def _cancel_load(self):
+        """
+        Anuluje wczytywanie danych — czyści temp_raw_df i zamyka popup.
+        """
         self.temp_raw_df = None
         self.popup.destroy()
         self.log("Anulowano wczytywanie.")
         self.set_status("Gotowy.")
 
     def apply_column_selection(self):
+        """
+        Zatwierdza wybór kolumn, przetwarza DataFrame i zapisuje do self.df.
+
+        Kroki:
+            1. Usuwa zaznaczone kolumny z temp_raw_df.
+            2. Zapamiętuje statystyki przed filtrowaniem (braki, typy).
+            3. Filtruje tylko kolumny numeryczne i usuwa wiersze z NaN.
+            4. Próbkuje do 1.2 mln rekordów jeśli zbiór jest zbyt duży (ochrona RAM).
+            5. Waliduje minimalną liczbę kolumn (min. 2: cechy + target).
+            6. Zapisuje metadane do self._meta i zamyka popup.
+        """
         sel = self.col_listbox.curselection()
         to_drop = [self.col_listbox.get(i) for i in sel]
         if to_drop:
@@ -406,6 +607,17 @@ class MLProjectGUI:
     # ANALIZA DANYCH I WYBÓR CECH
     # ─────────────────────────────────────────────────────────────────────
     def analyze_data(self):
+        """
+        Wypełnia zakładkę 'Analiza Zbioru' statystykami i wykresem rozkładu klas.
+
+        Kroki:
+            1. Sprawdza czy dane są wczytane.
+            2. Oblicza rozkład klas (value_counts + procentowy udział).
+            3. Aktualizuje etykiety metadanych (rekordy, cechy, typy, braki, target, balans).
+            4. Wypełnia Treeview statystykami opisowymi (describe().T).
+            5. Rysuje wykres słupkowy rozkładu klas z etykietami procentowymi.
+            6. Loguje ostrzeżenie jeśli jakakolwiek klasa ma poniżej 30% udziału.
+        """
         if self.df is None: return messagebox.showwarning("Uwaga", "Najpierw wczytaj dane (krok 1)!")
         m, target_col = self._meta, self._meta['target']
         class_counts = self.df[target_col].value_counts()
@@ -453,6 +665,20 @@ class MLProjectGUI:
         self.notebook.select(0)
 
     def select_features(self):
+        """
+        Wykonuje selekcję cech metodą SelectKBest (f_classif) i tworzy 3 gałęzie.
+
+        Kroki:
+            1. Sprawdza czy dane są wczytane.
+            2. Uruchamia SelectKBest z f_classif na wszystkich cechach.
+            3. Zapisuje wyniki do self.feature_scores.
+            4. Tworzy 3 gałęzie w self.branches:
+               - Gałąź 1: wszystkie cechy
+               - Gałąź 2: top 50% cech wg score (posortowane wg indeksu oryginalnego)
+               - Gałąź 3: top 20% cech wg score (minimum 1 cecha)
+            5. Wypełnia listboxy w zakładce Konfiguracja Gałęzi.
+            6. Wywołuje _draw_feature_importance() i przełącza na zakładkę 1.
+        """
         if self.df is None: return messagebox.showwarning("Uwaga", "Najpierw wczytaj dane (krok 1)!")
         self.log("Selekcja cech — SelectKBest / f_classif ...")
         self.set_status("Obliczanie ważności cech...")
@@ -479,6 +705,14 @@ class MLProjectGUI:
         self.notebook.select(1)
 
     def _draw_feature_importance(self):
+        """
+        Rysuje poziomy wykres słupkowy ważności cech (top 20) w zakładce Gałęzie.
+
+        Kroki:
+            1. Sortuje self.feature_scores malejąco i bierze top 20.
+            2. Koloruje słupki: top 20% — granatowe, top 50% — szare, reszta — jasnoszare.
+            3. Osadza wykres w self.feat_chart_frame przez FigureCanvasTkAgg.
+        """
         for w in self.feat_chart_frame.winfo_children(): w.destroy()
         sorted_feats = sorted(self.feature_scores.items(), key=lambda x: x[1], reverse=True)[:20]
         names, values = [f[0] for f in sorted_feats], [f[1] for f in sorted_feats]
@@ -497,9 +731,23 @@ class MLProjectGUI:
         plt.close(fig)
 
     # ─────────────────────────────────────────────────────────────────────
-    # OKIENKO LICZBY EKSPERYMENTÓW (Połączone z[cite: 1] i[cite: 2])
+    # OKIENKO LICZBY EKSPERYMENTÓW
     # ─────────────────────────────────────────────────────────────────────
     def ask_experiment_count(self):
+        """
+        Wyświetla modalne okno konfiguracji eksperymentów przed ich uruchomieniem.
+
+        Kroki:
+            1. Sprawdza czy gałęzie są zdefiniowane (krok 3 musi być wykonany).
+            2. Tworzy okno Toplevel z 4 parametrami do ustawienia:
+               - Liczba eksperymentów (min. 30, tylko cyfry)
+               - Kryterium drzewa: 'gini' lub 'entropy'
+               - Rozmiar zbioru testowego: 0.2 / 0.3 / 0.4
+               - Checkbox: czy wykonać 5-fold cross-validation
+            3. Etykieta podpowiedzi aktualizuje się dynamicznie (liczba exp. na gałąź).
+            4. Przycisk Uruchom waliduje dane i wywołuje run_experiments().
+            5. Obsługuje klawisze Enter (potwierdź) i Escape (anuluj).
+        """
         if not self.branches: return messagebox.showwarning("Uwaga", "Najpierw wykonaj wybór cech (krok 3)!")
 
         popup = tk.Toplevel(self.root)
@@ -526,7 +774,7 @@ class MLProjectGUI:
         lbl_hint = tk.Label(cf, text="Na gałąź: ~10", bg=W98['bg'], fg=W98['disabled'], font=W98['font'])
         lbl_hint.pack(anchor=tk.W, pady=(2, 8))
 
-        # 2. PARAMETR: Kryterium podziału (z pliku 1)
+        # 2. PARAMETR: Kryterium podziału
         row2 = tk.Frame(cf, bg=W98['bg'])
         row2.pack(fill=tk.X, pady=4)
         w98_label(row2, "Kryterium drzewa:").pack(side=tk.LEFT)
@@ -534,7 +782,7 @@ class MLProjectGUI:
         cb_crit = ttk.Combobox(row2, textvariable=var_crit, values=["gini", "entropy"], state="readonly", width=10)
         cb_crit.pack(side=tk.LEFT, padx=(22, 8))
 
-        # 3. PARAMETR: Zbiór testowy (z pliku 1)
+        # 3. PARAMETR: Zbiór testowy
         row3 = tk.Frame(cf, bg=W98['bg'])
         row3.pack(fill=tk.X, pady=4)
         w98_label(row3, "Rozmiar testowy:").pack(side=tk.LEFT)
@@ -542,7 +790,7 @@ class MLProjectGUI:
         cb_test = ttk.Combobox(row3, textvariable=var_test, values=["0.2", "0.3", "0.4"], state="readonly", width=10)
         cb_test.pack(side=tk.LEFT, padx=(24, 8))
 
-        # 4. PARAMETR: Walidacja krzyżowa (z pliku 2)
+        # 4. PARAMETR: Walidacja krzyżowa
         cv_var = tk.BooleanVar(value=True)
         cv_row = tk.Frame(cf, bg=W98['bg'])
         cv_row.pack(fill=tk.X, pady=(8, 0))
@@ -578,6 +826,28 @@ class MLProjectGUI:
     # EKSPERYMENTY
     # ─────────────────────────────────────────────────────────────────────
     def run_experiments(self, total=30, criterion='gini', test_size=0.3, do_cv=True):
+        """
+        Główna funkcja uruchamiająca wszystkie eksperymenty ML.
+
+        Kroki:
+            1. Oblicza liczbę eksperymentów na gałąź (total // 3) i zapamiętuje parametry.
+            2. Generuje listę głębokości drzewa (depths) — równomiernie rozłożone od 1 do 30.
+            3. Dla każdej z 3 gałęzi i każdej głębokości:
+               - Trenuje DecisionTreeClassifier
+               - Liczy metryki: Accuracy, Precision, Recall, F1 (train i test)
+               - Wykrywa overfit (gdy train_acc - test_acc > 5%)
+            4. Śledzi najlepszy model (najwyższa Accuracy na teście).
+            5. Opcjonalnie uruchamia 5-fold CV na najlepszym modelu
+               (z próbkowaniem do 100k rekordów dla wydajności).
+            6. Wywołuje kolejno: _fill_results_table, _draw_comparison_charts,
+               _draw_learning_curve, _update_best_model, _generate_auto_observations.
+
+        Args:
+            total (int): Całkowita liczba eksperymentów (dzielona na 3 gałęzie).
+            criterion (str): Kryterium podziału drzewa: 'gini' lub 'entropy'.
+            test_size (float): Ułamek danych przeznaczonych na zbiór testowy (0.2–0.4).
+            do_cv (bool): Czy wykonać 5-fold cross-validation na najlepszym modelu.
+        """
         n_per_branch = max(1, total // 3)
         actual_total = n_per_branch * 3
 
@@ -659,6 +929,20 @@ class MLProjectGUI:
         self.notebook.select(2)
 
     def _fill_results_table(self, best_result):
+        """
+        Wypełnia tabelę Treeview wynikami wszystkich eksperymentów z kolorowaniem.
+
+        Kroki:
+            1. Czyści poprzednią zawartość tabeli.
+            2. Dla każdego wyniku przypisuje tag kolorystyczny:
+               - 'best'    → najlepszy eksperyment (zielony)
+               - 'overfit' → wykryty overfit (czerwonawy)
+               - 'branch1/2/3' → kolor per gałąź
+            3. Wstawia wiersz z wartościami (nr, gałąź, depth, metryki, overfit).
+
+        Args:
+            best_result (dict): Słownik wyników najlepszego eksperymentu.
+        """
         self.results_tree.delete(*self.results_tree.get_children())
         tag_map = {'Gałąź 1': 'branch1', 'Gałąź 2': 'branch2', 'Gałąź 3': 'branch3'}
         for r in self.all_results:
@@ -669,6 +953,17 @@ class MLProjectGUI:
             ))
 
     def _draw_comparison_charts(self):
+        """
+        Rysuje siatkę 6 wykresów porównawczych metryk dla wszystkich eksperymentów.
+
+        Kroki:
+            1. Tworzy siatkę 2×3 (GridSpec) w Matplotlib.
+            2. Wykresy 1–4 (liniowe): Accuracy / Precision / Recall / F1 vs max_depth,
+               osobna linia per gałąź.
+            3. Wykres 5: Train vs Test Accuracy — linie ciągłe (test) i przerywane (train).
+            4. Wykres 6 (słupkowy): średnie Train vs Test per gałąź — porównanie ogólne.
+            5. Osadza całą figurę w self.compare_chart_frame.
+        """
         for w in self.compare_chart_frame.winfo_children(): w.destroy()
         fig = plt.figure(figsize=(13, 7))
         fig.patch.set_facecolor('#c0c0c0')
@@ -719,6 +1014,23 @@ class MLProjectGUI:
         plt.close(fig)
 
     def _draw_learning_curve(self, best_result, best_features, test_size):
+        """
+        Rysuje krzywą uczenia i wykres train/test vs głębokość dla najlepszego modelu.
+
+        Kroki:
+            1. Próbkuje dane do max 50k rekordów (optymalizacja wydajności).
+            2. Generuje 8 rosnących rozmiarów zbioru treningowego (10% → 100%).
+            3. Dla każdego rozmiaru trenuje model i mierzy accuracy (train i test).
+            4. Lewy wykres: krzywa uczenia (accuracy vs liczba próbek treningowych)
+               z zacieniowaną "luką overfittingu" między train a test.
+            5. Prawy wykres: train vs test accuracy wg max_depth dla gałęzi najlepszego modelu,
+               z zieloną pionową linią optymalnej głębokości.
+
+        Args:
+            best_result (dict): Słownik wyników najlepszego eksperymentu.
+            best_features (list): Lista nazw cech najlepszego modelu.
+            test_size (float): Ułamek danych testowych (użyty w train_test_split).
+        """
         for w in self.learning_curve_frame.winfo_children(): w.destroy()
         X, y = self.df[best_features], self.df.iloc[:, -1]
         if len(X) > 50_000:
@@ -766,6 +1078,23 @@ class MLProjectGUI:
         plt.close(fig)
 
     def _update_best_model(self, best, cm, model, features, cv_score=None):
+        """
+        Aktualizuje zakładkę 'Najlepszy Model' — etykiety metryk i wykresy.
+
+        Kroki:
+            1. Aktualizuje etykiety tekstowe: Accuracy, Precision, Recall, F1, CV score.
+            2. Rysuje macierz pomyłek (ConfusionMatrixDisplay) z paletą Blues.
+            3. Rysuje uproszczone drzewo decyzyjne (głębokość ograniczona do max 3
+               poziomów dla czytelności wizualizacji).
+            4. Osadza obie figury przez FigureCanvasTkAgg w odpowiednich ramkach.
+
+        Args:
+            best (dict): Słownik wyników najlepszego eksperymentu.
+            cm (np.ndarray): Macierz pomyłek (confusion matrix).
+            model (DecisionTreeClassifier): Wytrenowany najlepszy model.
+            features (list): Lista nazw cech użytych w najlepszym modelu.
+            cv_score (float|None): Wynik cross-validation lub None jeśli pominięto.
+        """
         self.lbl_best_info.config(text=f"  Najlepszy: {best['branch']}, max_depth={best['depth']}  ")
         self.lbl_acc.config(text=f"  Accuracy:  {best['acc'] * 100:.2f}%  ")
         self.lbl_prec.config(text=f"  Precision: {best['prec'] * 100:.2f}%  ")
@@ -802,6 +1131,17 @@ class MLProjectGUI:
             self.log(f"Wizualizacja drzewa niedostępna: {e}")
 
     def _generate_auto_observations(self):
+        """
+        Generuje automatyczny raport tekstowy z podsumowaniem wszystkich eksperymentów.
+
+        Kroki:
+            1. Wyszukuje najlepszy i najgorszy wynik po Accuracy.
+            2. Wypisuje metryki najlepszego (Acc, Prec, Rec, F1, Train, Overfit).
+            3. Wypisuje metryki najgorszego (Acc, F1).
+            4. Liczy łączną liczbę eksperymentów z overfittingiem.
+            5. Dla każdej gałęzi oblicza: średnie Test Acc, Train Acc i lukę (gap).
+            6. Wstawia gotowy tekst do self.auto_obs_text i przełącza na zakładkę Obserwacje.
+        """
         if not self.all_results: return
         lines = ["=" * 60, "  AUTOMATYCZNE SPOSTRZEZENIA Z EKSPERYMENTOW", "=" * 60, ""]
         best = max(self.all_results, key=lambda r: r['acc'])
@@ -833,9 +1173,19 @@ class MLProjectGUI:
         self.notebook.select(6)
 
     # ─────────────────────────────────────────────────────────────────────
-    # EKSPORT Z POŁĄCZENIEM Z PLIKU 1
+    # EKSPORT
     # ─────────────────────────────────────────────────────────────────────
     def export_results_csv(self):
+        """
+        Eksportuje surowe wyniki wszystkich eksperymentów do pliku CSV.
+
+        Kroki:
+            1. Sprawdza czy są wyniki — jeśli nie, pokazuje ostrzeżenie.
+            2. Otwiera dialog zapisu pliku (domyślna nazwa: wyniki.csv).
+            3. Zapisuje każdy wynik jako wiersz CSV z kolumnami:
+               nr, branch, depth, acc, prec, rec, f1, train_acc, overfit (TAK/NIE).
+               Wartości metryczne formatowane do 4 miejsc po przecinku.
+        """
         if not self.all_results: return messagebox.showwarning("Brak danych", "Najpierw uruchom eksperymenty!")
         path = filedialog.asksaveasfilename(defaultextension=".csv", filetypes=[("CSV Files", "*.csv")], initialfile="wyniki.csv")
         if not path: return
@@ -853,6 +1203,19 @@ class MLProjectGUI:
         except Exception as e: messagebox.showerror("Błąd", str(e))
 
     def export_observations_txt(self):
+        """
+        Eksportuje pełny raport tekstowy z wynikami i wnioskami użytkownika.
+
+        Kroki:
+            1. Sprawdza czy są wyniki — jeśli nie, pokazuje ostrzeżenie.
+            2. Otwiera dialog zapisu pliku (domyślna nazwa: raport.txt).
+            3. Pobiera treść pól tekstowych: obs_text, wn_text, end_text.
+            4. Zapisuje raport w 4 sekcjach:
+               - Dane (rekordy, cechy, kolumna docelowa)
+               - Parametry startowe (criterion, test_size, liczba eksperymentów)
+               - Wynik najlepszego modelu (branch, depth, metryki, overfit)
+               - Własne spostrzeżenia i wnioski użytkownika (z pól tekstowych)
+        """
         if not self.all_results:
             return messagebox.showwarning("Uwaga", "Brak wyników do zapisu!")
         path = filedialog.asksaveasfilename(defaultextension=".txt", filetypes=[("Text Files", "*.txt")], initialfile="raport.txt")
