@@ -1,7 +1,7 @@
 from theme import W98
 from widgets import (
     w98_label, w98_button, w98_entry, w98_listbox, w98_scrollbar,
-    w98_labelframe, w98_title_bar, w98_separator)
+    w98_labelframe, w98_title_bar, w98_separator, w98_frame)
 
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
@@ -27,13 +27,13 @@ class W98Notebook:
         self.tabs = []
         self.current = 0
 
-        self.tab_bar = tk.Frame(parent, bg=W98['bg'])
+        self.tab_bar = w98_frame(parent)
         self.tab_bar.pack(fill=tk.X)
 
-        self.content_border = tk.Frame(parent, bg=W98['bg_dark'], bd=1, relief=tk.RAISED)
+        self.content_border = w98_frame(parent, bg=W98['bg_dark'], bd=1, relief=tk.RAISED)
         self.content_border.pack(fill=tk.BOTH, expand=True)
 
-        self.content = tk.Frame(self.content_border, bg=W98['bg'])
+        self.content = w98_frame(self.content_border)
         self.content.pack(fill=tk.BOTH, expand=True, padx=1, pady=1)
 
     def add(self, text):
@@ -60,6 +60,7 @@ class W98Notebook:
             new_frame.pack(fill=tk.BOTH, expand=True)
             new_btn.config(bg=W98['bg'], relief=tk.RAISED)
 
+
 class W98Menubar:
     def __init__(self, parent, app):
         self.app = app
@@ -71,31 +72,31 @@ class W98Menubar:
     def _build(self):
         menus = {
             "Plik": [
-                ("📂  Wczytaj CSV...", self.app.load_data),
-                ("💾  Eksportuj wyniki CSV...", self.app.export_results_csv),
-                ("📄  Eksportuj raport TXT...", self.app.export_observations_txt),
+                ("Wczytaj CSV...", self.app.load_data),
+                ("Eksportuj wyniki CSV...", self.app.export_results_csv),
+                ("Eksportuj raport TXT...", self.app.export_observations_txt),
                 None,
-                ("❌  Wyjdź", self.app.root.quit),
+                ("Wyjdź", self.app.root.quit),
             ],
             "Widok": [
-                ("📋  Analiza zbioru", lambda: self.app.notebook.select(0)),
-                ("🌿  Konfiguracja gałęzi", lambda: self.app.notebook.select(1)),
-                ("📈  Tabela wyników", lambda: self.app.notebook.select(2)),
-                ("📊  Wykresy porównawcze", lambda: self.app.notebook.select(3)),
-                ("🔬  Krzywa uczenia", lambda: self.app.notebook.select(4)),
-                ("🏆  Najlepszy model", lambda: self.app.notebook.select(5)),
-                ("📝  Obserwacje i wnioski", lambda: self.app.notebook.select(6)),
-                ("📖  Instrukcja i opis", lambda: self.app.notebook.select(7)),
+                ("Analiza zbioru", lambda: self.app.notebook.select(0)),
+                ("Konfiguracja gałęzi", lambda: self.app.notebook.select(1)),
+                ("Tabela wyników", lambda: self.app.notebook.select(2)),
+                ("Wykresy porównawcze", lambda: self.app.notebook.select(3)),
+                ("Krzywa uczenia", lambda: self.app.notebook.select(4)),
+                ("Najlepszy model", lambda: self.app.notebook.select(5)),
+                ("Obserwacje i wnioski", lambda: self.app.notebook.select(6)),
+                ("Instrukcja i opis", lambda: self.app.notebook.select(7)),
             ],
             "Narzędzia": [
-                ("📊  Analiza danych", self.app.analyze_data),
-                ("🔍  Wybór cech", self.app.select_features),
-                ("▶   Uruchom eksperymenty...", self.app.ask_experiment_count),
+                ("Analiza danych", self.app.analyze_data),
+                ("Wybór cech", self.app.select_features),
+                ("Uruchom eksperymenty...", self.app.ask_experiment_count),
                 None,
-                ("🗑  Wyczyść log", self.app.clear_log),
+                ("Wyczyść log", self.app.clear_log),
             ],
             "Pomoc": [
-                ("ℹ   O programie", self._show_about),
+                ("O programie", self._show_about),
             ],
         }
 
@@ -297,10 +298,10 @@ class MLProjectGUI:
         tk.Frame(self.sidebar, bg=W98['bg'], height=8).pack()
 
         steps = [
-            ("📂  1. Wczytaj Zbiór", self.load_data),
-            ("📊  2. Analiza Danych", self.analyze_data),
-            ("🔍  3. Wybór Cech", self.select_features),
-            ("▶   4. Uruchom\n       Eksperymenty", self.ask_experiment_count),
+            ("1. Wczytaj Zbiór", self.load_data),
+            ("2. Analiza Danych", self.analyze_data),
+            ("3. Wybór Cech", self.select_features),
+            ("4. Uruchom\n       Eksperymenty", self.ask_experiment_count),
         ]
         for label, cmd in steps:
             btn = w98_button(self.sidebar, label, cmd)
@@ -311,8 +312,8 @@ class MLProjectGUI:
         tk.Frame(self.sidebar, bg='white', height=1).pack(fill=tk.X, padx=4)
 
         w98_label(self.sidebar, "Eksport:", bold=True).pack(anchor=tk.W, padx=6, pady=(4, 0))
-        w98_button(self.sidebar, "💾 Wyniki → CSV", self.export_results_csv).pack(fill=tk.X, padx=6, pady=2)
-        w98_button(self.sidebar, "📄 Raport → TXT", self.export_observations_txt).pack(fill=tk.X, padx=6, pady=2)
+        w98_button(self.sidebar, "Wyniki → CSV", self.export_results_csv).pack(fill=tk.X, padx=6, pady=2)
+        w98_button(self.sidebar, "Raport → TXT", self.export_observations_txt).pack(fill=tk.X, padx=6, pady=2)
 
         tk.Frame(self.sidebar, bg=W98['bg'], height=8).pack()
         tk.Label(self.sidebar, text="DecisionTreeClassifier\nscikit-learn",
@@ -1069,13 +1070,15 @@ Aplikacja bada zachowanie algorytmu w trzech scenariuszach wyboru cech:
         except Exception as e: messagebox.showerror("Błąd", str(e))
 
     def export_observations_txt(self):
-        if not self.all_results: return messagebox.showwarning("Uwaga", "Brak wyników do zapisu!")
+        if not self.all_results:
+            return messagebox.showwarning("Uwaga", "Brak wyników do zapisu!")
         path = filedialog.asksaveasfilename(defaultextension=".txt", filetypes=[("Text Files", "*.txt")], initialfile="raport.txt")
-        if not path: return
-        
+        if not path:
+            return
+
         best = max(self.all_results, key=lambda r: r['acc'])
         obs, wn, end = self.obs_text.get('1.0', tk.END).strip(), self.wn_text.get('1.0', tk.END).strip(), self.end_text.get('1.0', tk.END).strip()
-        
+
         try:
             with open(path, 'w', encoding='utf-8') as f:
                 f.write("=" * 60 + "\n  RAPORT Z EKSPERYMENTÓW\n" + "=" * 60 + "\n\n")
