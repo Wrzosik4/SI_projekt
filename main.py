@@ -1,3 +1,7 @@
+from widgets import (w98_frame, w98_entry, w98_button, w98_title_bar,
+                     w98_label, w98_separator, w98_labelframe, w98_text_area,
+                     w98_treeview, w98_scrolled_listbox)
+from theme import W98
 
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
@@ -9,125 +13,44 @@ import os
 from sklearn.model_selection import train_test_split, StratifiedKFold, cross_val_score
 from sklearn.feature_selection import SelectKBest, f_classif
 from sklearn.tree import DecisionTreeClassifier, plot_tree
-from sklearn.metrics import (accuracy_score, precision_score, recall_score,
-                             f1_score, confusion_matrix, ConfusionMatrixDisplay)
+from sklearn.metrics import (
+    accuracy_score, precision_score, recall_score,
+    f1_score, confusion_matrix, ConfusionMatrixDisplay)
 
 import matplotlib.pyplot as plt
 import matplotlib.gridspec as gridspec
 from matplotlib.backends.backend_tkagg import FigureCanvasTkAgg
 
-W98 = {
-    'bg': '#c0c0c0',
-    'bg_dark': '#808080',
-    'bg_light': '#ffffff',
-    'title_bg': '#000080',
-    'title_fg': '#ffffff',
-    'btn_bg': '#c0c0c0',
-    'btn_active': '#c0c0c0',
-    'text': '#000000',
-    'disabled': '#808080',
-    'highlight': '#000080',
-    'console_bg': '#000000',
-    'console_fg': '#c0c0c0',
-    'select_bg': '#000080',
-    'select_fg': '#ffffff',
-    'font': ('Microsoft Sans Serif', 8),
-    'font_bold': ('Microsoft Sans Serif', 8, 'bold'),
-    'font_title': ('Microsoft Sans Serif', 10, 'bold'),
-    'font_mono': ('Courier New', 8),
-}
-
-
-def w98_frame(parent, **kw):
-    return tk.Frame(parent, bg=W98['bg'], **kw)
-
-
-def w98_label(parent, text, bold=False, **kw):
-    font = W98['font_bold'] if bold else W98['font']
-    return tk.Label(parent, text=text, bg=W98['bg'], fg=W98['text'], font=font, **kw)
-
-
-def w98_button(parent, text, command, width=None, **kw):
-    btn = tk.Button(
-        parent, text=text, command=command,
-        bg=W98['btn_bg'], fg=W98['text'], font=W98['font'],
-        relief=tk.RAISED, bd=2,
-        activebackground=W98['btn_active'], activeforeground=W98['text'],
-        cursor='arrow',
-        **({} if width is None else {'width': width}), **kw)
-    return btn
-
-
-def w98_entry(parent, textvariable=None, width=10, **kw):
-    return tk.Entry(parent, bg=W98['bg_light'], fg=W98['text'],
-                    font=W98['font'], relief=tk.SUNKEN, bd=2,
-                    insertbackground=W98['text'],
-                    textvariable=textvariable, width=width, **kw)
-
-
-def w98_listbox(parent, **kw):
-    return tk.Listbox(parent, bg=W98['bg_light'], fg=W98['text'],
-                      font=W98['font_mono'],
-                      selectbackground=W98['select_bg'],
-                      selectforeground=W98['select_fg'],
-                      relief=tk.SUNKEN, bd=2, **kw)
-
-
-def w98_scrollbar(parent, **kw):
-    return tk.Scrollbar(parent, **kw)
-
-
-def w98_labelframe(parent, text, **kw):
-    outer = tk.Frame(parent, bg=W98['bg'], **kw)
-    tk.Label(outer, text=f" {text} ", bg=W98['bg'], fg=W98['text'],
-             font=W98['font_bold']).pack(anchor=tk.W, padx=4)
-    inner = tk.Frame(outer, bg=W98['bg'], relief=tk.GROOVE, bd=2)
-    inner.pack(fill=tk.BOTH, expand=True, padx=4, pady=(0, 4))
-    return outer, inner
-
-
-def w98_title_bar(parent, title, icon="🖥"):
-    bar = tk.Frame(parent, bg=W98['title_bg'], height=20)
-    bar.pack(fill=tk.X)
-    bar.pack_propagate(False)
-    tk.Label(bar, text=f"  {icon}  {title}", bg=W98['title_bg'], fg=W98['title_fg'],
-             font=W98['font_bold'], anchor=tk.W).pack(side=tk.LEFT, fill=tk.Y)
-    return bar
-
-
-def w98_separator(parent):
-    tk.Frame(parent, bg=W98['bg_dark'], height=1).pack(fill=tk.X, pady=2)
-    tk.Frame(parent, bg='white', height=1).pack(fill=tk.X)
-
 
 class W98Notebook:
     def __init__(self, parent):
         self.parent = parent
-        self.tabs = []
-        self.current = 0
+        self.tabs = []  # lista przechowująca zakładki.
+        self.current = 0  # numer aktualnie wybranej zakładki.
 
-        self.tab_bar = tk.Frame(parent, bg=W98['bg'])
+        self.tab_bar = w98_frame(parent)  # pasek z przyciskami zakładek.
         self.tab_bar.pack(fill=tk.X)
 
-        self.content_border = tk.Frame(parent, bg=W98['bg_dark'], bd=1, relief=tk.RAISED)
-        self.content_border.pack(fill=tk.BOTH, expand=True)
+        # ramka otaczająca zawartość
+        border = w98_frame(parent, bg=W98['bg_dark'], bd=1, relief=tk.RAISED)
+        border.pack(fill=tk.BOTH, expand=True)
 
-        self.content = tk.Frame(self.content_border, bg=W98['bg'])
-        self.content.pack(fill=tk.BOTH, expand=True, padx=1, pady=1)
+        # główny obszar wyświetlający zawartość
+        self.content = w98_frame(border, padx=1, pady=1)
+        self.content.pack(fill=tk.BOTH, expand=True)
 
-    def add(self, text):
+    def add(self, text):  # dodaje nową zakładkę
         idx = len(self.tabs)
-        frame = tk.Frame(self.content, bg=W98['bg'])
-        btn = tk.Button(
+        frame = w98_frame(self.content)
+        btn = w98_button(
             self.tab_bar, text=text,
-            font=W98['font'],
+            command=lambda i=idx: self.select(i),
             bg=W98['bg'] if idx == 0 else W98['bg_dark'],
-            fg=W98['text'],
             relief=tk.RAISED if idx == 0 else tk.FLAT,
-            bd=2, padx=6, pady=2,
-            command=lambda i=idx: self.select(i))
+            padx=6, pady=2
+        )
         btn.pack(side=tk.LEFT, padx=(2 if idx == 0 else 0, 0), pady=(4, 0))
-        self.tabs.append((text, frame, btn))
+        self.tabs.append((text, frame, btn))  # dodaje zakładkę do listy
         if idx == 0:
             frame.pack(fill=tk.BOTH, expand=True)
         return frame
@@ -137,6 +60,7 @@ class W98Notebook:
             _, old_frame, old_btn = self.tabs[self.current]
             old_frame.pack_forget()
             old_btn.config(bg=W98['bg_dark'], relief=tk.FLAT)
+
             self.current = idx
             _, new_frame, new_btn = self.tabs[idx]
             new_frame.pack(fill=tk.BOTH, expand=True)
@@ -338,51 +262,59 @@ class MLProjectGUI:
     # ─────────────────────────────────────────────────────────────────────
 
     def create_widgets(self):
-        w98_title_bar(self.root, "Środowisko Eksperymentów ML — Projekt", icon="📊")
+        # pasek tytułu aplikacji
+        w98_title_bar(self.root, "Środowisko Eksperymentów ML — Projekt")
 
+        # menu bar
         self.menubar = W98Menubar(self.root, self)
         w98_separator(self.root)
 
-        main = tk.Frame(self.root, bg=W98['bg'])
+        # główny układ
+        main = w98_frame(self.root)
         main.pack(fill=tk.BOTH, expand=True, padx=4, pady=2)
 
-        self.sidebar = tk.Frame(main, bg=W98['bg'], width=200, relief=tk.GROOVE, bd=2)
+        # sidebar
+        self.sidebar = w98_frame(main, width=200, relief=tk.GROOVE, bd=2)
         self.sidebar.pack(side=tk.LEFT, fill=tk.Y, padx=(0, 4))
         self.sidebar.pack_propagate(False)
 
-        right = tk.Frame(main, bg=W98['bg'])
+        # prawa strona
+        right = w98_frame(main)
         right.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
+        # log na dole
+        log_outer, log_inner = w98_labelframe(right, "Konsola / Log")
+        log_outer.pack(side=tk.BOTTOM, fill=tk.X, pady=(4, 0))
+
+        # notebook
         self.notebook = W98Notebook(right)
 
-        prog_f = tk.Frame(right, bg=W98['bg'])
-        prog_f.pack(fill=tk.X, pady=(2, 0))
-        self.progress_var = tk.DoubleVar(value=0)
-        self.progress_bar = ttk.Progressbar(prog_f, variable=self.progress_var,
-                                            maximum=100, style="W98.Horizontal.TProgressbar")
-        self.progress_bar.pack(fill=tk.X, padx=2)
-        self.progress_lbl = tk.Label(prog_f, text="", bg=W98['bg'], fg=W98['text'],
-                                     font=W98['font'])
-        self.progress_lbl.pack(anchor=tk.W)
+        # tekst konsoli
+        txt_frame, self.console = w98_text_area(
+            log_inner, height=6, mono=True,
+            bg=W98['console_bg'], fg=W98['console_fg'],
+            insertbackground='white'
+        )
+        txt_frame.pack(fill=tk.BOTH, expand=True)
 
-        log_outer, log_inner = w98_labelframe(right, "Konsola / Log")
-        log_outer.pack(fill=tk.X, pady=(2, 0))
-        self.console = tk.Text(log_inner, height=5,
-                               bg=W98['console_bg'], fg=W98['console_fg'],
-                               font=W98['font_mono'], relief=tk.SUNKEN, bd=1,
-                               insertbackground='white', state=tk.NORMAL)
-        csb = w98_scrollbar(log_inner, command=self.console.yview)
-        csb.pack(side=tk.RIGHT, fill=tk.Y)
-        self.console.configure(yscrollcommand=csb.set)
-        self.console.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
+#         prog_f = tk.Frame(right, bg=W98['bg'])
+#         prog_f.pack(fill=tk.X, pady=(2, 0))
+#         self.progress_var = tk.DoubleVar(value=0)
+#         self.progress_bar = ttk.Progressbar(prog_f, variable=self.progress_var,
+#                                             maximum=100, style="W98.Horizontal.TProgressbar")
+#         self.progress_bar.pack(fill=tk.X, padx=2)
+#         self.progress_lbl = tk.Label(prog_f, text="", bg=W98['bg'], fg=W98['text'],
+#                                      font=W98['font'])
+#         self.progress_lbl.pack(anchor=tk.W)
 
         self.build_sidebar()
         self.build_tabs()
 
-        self.statusbar = tk.Label(self.root,
-                                  text="  Gotowy. Wczytaj plik CSV aby rozpocząć.",
-                                  bg=W98['bg_dark'], fg='white',
-                                  font=W98['font'], anchor=tk.W, relief=tk.SUNKEN, bd=1)
+        # Pasek statusu
+        self.statusbar = w98_label(self.root, "  Gotowy. Wczytaj plik CSV," +
+                                   "aby rozpocząć.", bg=W98['bg_dark'],
+                                   fg='white', anchor=tk.W, relief=tk.SUNKEN,
+                                   bd=1)
         self.statusbar.pack(fill=tk.X, side=tk.BOTTOM)
         self.log("System gotowy. Oczekuję na wczytanie danych...")
 
@@ -396,29 +328,53 @@ class MLProjectGUI:
         self.root.update()
 
     def build_sidebar(self):
-        hdr = tk.Frame(self.sidebar, bg=W98['title_bg'])
-        hdr.pack(fill=tk.X)
-        tk.Label(hdr, text="  📁 ML Eksperymenty",
-                 bg=W98['title_bg'], fg='white',
-                 font=W98['font_bold'], pady=8, anchor=tk.W).pack(fill=tk.X)
-
-        tk.Frame(self.sidebar, bg=W98['bg'], height=8).pack()
+        hdr = w98_frame(self.sidebar, bg=W98['title_bg'])
+        hdr.pack(fill=tk.X, pady=(0, 8))
+        w98_label(hdr, "ML Eksperymenty", bg=W98['title_bg'], fg='white',
+                  bold=True, anchor=tk.W).pack(fill=tk.X, pady=8)
 
         steps = [
-            ("📂  1. Wczytaj Zbiór", self.load_data),
-            ("📊  2. Analiza Danych", self.analyze_data),
-            ("🔍  3. Wybór Cech", self.select_features),
-            ("▶   4. Uruchom\n       Eksperymenty", self.ask_experiment_count),
+            ("1. Wczytaj Zbiór", self.load_data),
+            ("2. Analiza Danych", self.analyze_data),
+            ("3. Wybór Cech",    self.select_features),
+            ("4. Uruchom Eksperymenty", self.ask_experiment_count),
         ]
         for label, cmd in steps:
-            btn = w98_button(self.sidebar, label, cmd)
-            btn.config(anchor=tk.W, padx=8, pady=4, wraplength=180, justify=tk.LEFT)
-            btn.pack(fill=tk.X, padx=6, pady=3)
+            w98_button(self.sidebar, label, cmd, anchor=tk.W, padx=8, pady=4,
+                       wraplength=180, justify=tk.LEFT).pack(fill=tk.X,
+                                                             padx=6, pady=3)
+        w98_separator(self.sidebar)
 
-        tk.Frame(self.sidebar, bg=W98['bg_dark'], height=1).pack(fill=tk.X, padx=4, pady=8)
-        tk.Frame(self.sidebar, bg='white', height=1).pack(fill=tk.X, padx=4)
-        tk.Frame(self.sidebar, bg=W98['bg'], height=4).pack()
+#         w98_label(self.sidebar, "Drzewo decyzyjne\nDecisionTreeClassifier\n" +
+#                   "scikit-learn", fg=W98['disabled'], font=('Courier New', 7),
+#                   justify=tk.CENTER).pack(pady=(8, 4))
 
+#     def build_tabs(self):
+#         # ── TAB 1: Analiza zbioru
+#         self.tab_data = self.notebook.add("Analiza Zbioru")
+#         self._build_tab_data(self.tab_data)
+
+#         # ── TAB 2: Gałęzie
+#         self.tab_branches = self.notebook.add("Konfiguracja Gałęzi")
+#         self._build_tab_branches(self.tab_branches)
+
+#         # ── TAB 3: Tabela wyników
+#         self.tab_table = self.notebook.add("Tabela Wyników")
+#         self._build_tab_table(self.tab_table)
+
+#         # ── TAB 4: Wykresy
+#         self.tab_charts = self.notebook.add("Wykresy Porównawcze")
+#         self.compare_chart_frame = w98_frame(self.tab_charts,
+#                                              bg=W98['bg_light'])
+#         self.compare_chart_frame.pack(fill=tk.BOTH, expand=True)
+
+#         # ── TAB 5: Najlepszy model
+#         self.tab_results = self.notebook.add("Najlepszy Model")
+#         self._build_tab_results(self.tab_results)
+
+#         # ── TAB 6: Obserwacje
+#         self.tab_obs = self.notebook.add("Obserwacje i Wnioski")
+#         self.build_observations_tab(self.tab_obs)
         w98_label(self.sidebar, "Eksport:", bold=True).pack(anchor=tk.W, padx=6, pady=(4, 0))
         w98_button(self.sidebar, "💾 Wyniki → CSV", self.export_results_csv).pack(
             fill=tk.X, padx=6, pady=2)
@@ -459,9 +415,9 @@ class MLProjectGUI:
         self._build_tab_instruction(t8)
 
     def _build_tab_data(self, parent):
-        w98_title_bar(parent, "Informacje o wczytanym zbiorze danych", icon="📋")
+        w98_title_bar(parent, "Informacje o wczytanym zbiorze danych")
 
-        info_f = tk.Frame(parent, bg=W98['bg'])
+        info_f = w98_frame(parent)
         info_f.pack(fill=tk.X, padx=8, pady=6)
 
         labels_def = [
@@ -472,16 +428,29 @@ class MLProjectGUI:
             ("Zbalansowanie klas:", "lbl_balance"),
             ("Kolumna docelowa:", "lbl_target"),
         ]
+
         for i, (caption, attr) in enumerate(labels_def):
-            tk.Label(info_f, text=caption, bg=W98['bg'], fg=W98['text'],
-                     font=W98['font_bold'], width=22, anchor=tk.E).grid(
+            w98_label(info_f, caption, bold=True, width=22, anchor=tk.E).grid(
                 row=i, column=0, sticky=tk.E, padx=(0, 4), pady=1)
-            lbl = tk.Label(info_f, text="—", bg=W98['bg'], fg=W98['text'],
-                           font=W98['font'], anchor=tk.W)
+
+            lbl = w98_label(info_f, "—", anchor=tk.W)
             lbl.grid(row=i, column=1, sticky=tk.W, pady=1)
             setattr(self, attr, lbl)
 
         w98_separator(parent)
+#         w98_label(parent, "Statystyki opisowe cech:",
+#                   bold=True).pack(anchor=tk.W, padx=8, pady=(4, 2))
+
+#         stats_wrap, self.stats_tree = w98_treeview(parent, height=7)
+#         stats_wrap.pack(fill=tk.BOTH, expand=True, padx=8, pady=2)
+
+#         _, self.class_chart_frame = (
+#                                     w98_labelframe(parent,
+#                                                    "Rozkład klas (cel" +
+#                                                    " klasyfikacji)")
+#         )
+#         self.class_chart_frame.master.pack(fill=tk.BOTH, expand=True,
+#                                            padx=8, pady=4)
         w98_label(parent, "Statystyki opisowe cech:", bold=True).pack(
             anchor=tk.W, padx=8, pady=(4, 2))
 
@@ -502,9 +471,9 @@ class MLProjectGUI:
         self.class_chart_frame.master.pack(fill=tk.BOTH, expand=True, padx=8, pady=4)
 
     def _build_tab_branches(self, parent):
-        w98_title_bar(parent, "Zestawy cech — 3 gałęzie eksperymentów", icon="🌿")
+        w98_title_bar(parent, "Zestawy cech — 3 gałęzie eksperymentów")
 
-        branches_f = tk.Frame(parent, bg=W98['bg'])
+        branches_f = w98_frame(parent)
         branches_f.pack(fill=tk.BOTH, expand=True, padx=8, pady=6)
 
         self.listboxes = []
@@ -513,17 +482,14 @@ class MLProjectGUI:
             "Gałąź 2: Top 50% (SelectKBest)",
             "Gałąź 3: Top 20% (ścisła selekcja)",
         ]
+
         for t in titles:
-            col = tk.Frame(branches_f, bg=W98['bg'])
+            col = w98_frame(branches_f)
             col.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=4)
             w98_label(col, t, bold=True).pack(anchor=tk.W, pady=(0, 2))
-            box_f = tk.Frame(col, bg=W98['bg'], relief=tk.SUNKEN, bd=2)
+
+            box_f, lb = w98_scrolled_listbox(col)
             box_f.pack(fill=tk.BOTH, expand=True)
-            sb = w98_scrollbar(box_f)
-            sb.pack(side=tk.RIGHT, fill=tk.Y)
-            lb = w98_listbox(box_f, yscrollcommand=sb.set)
-            lb.pack(fill=tk.BOTH, expand=True)
-            sb.config(command=lb.yview)
             self.listboxes.append(lb)
 
         _, self.feat_chart_frame = w98_labelframe(
@@ -531,9 +497,13 @@ class MLProjectGUI:
         self.feat_chart_frame.master.pack(fill=tk.BOTH, expand=True, padx=8, pady=4)
 
     def _build_tab_table(self, parent):
-        w98_title_bar(parent, "Wyniki wszystkich eksperymentów", icon="📈")
+        w98_title_bar(parent, "Wyniki wszystkich eksperymentów")
 
-        tbl_f = tk.Frame(parent, bg=W98['bg'])
+        cols = ("Nr", "Gałąź", "max_depth", "Accuracy",
+                "Precision", "Recall", "F1")
+
+        tbl_f, self.results_tree = w98_treeview(parent, height=25,
+                                                columns=cols, show='headings')
         tbl_f.pack(fill=tk.BOTH, expand=True, padx=8, pady=6)
 
         cols = ("Nr", "Gałąź", "max_depth", "Accuracy", "Precision",
@@ -545,6 +515,8 @@ class MLProjectGUI:
             self.results_tree.heading(c, text=c)
             self.results_tree.column(c, width=w, anchor=tk.CENTER)
 
+#         self.results_tree.tag_configure('best', background='#00ff00',
+#                                         foreground='#000080')
         vsb = ttk.Scrollbar(tbl_f, orient=tk.VERTICAL, command=self.results_tree.yview,
                             style="W98.Vertical.TScrollbar")
         self.results_tree.configure(yscrollcommand=vsb.set)
@@ -558,11 +530,32 @@ class MLProjectGUI:
         self.results_tree.tag_configure('branch3', background='#dde8ff')
 
     def _build_tab_results(self, parent):
-        w98_title_bar(parent, "Najlepszy model spośród wszystkich eksperymentów", icon="🏆")
+        w98_title_bar(parent, "Najlepszy model spośród wszystkich" +
+                      " eksperymentów")
 
-        mf = tk.Frame(parent, bg=W98['bg'])
+        mf = w98_frame(parent)
         mf.pack(fill=tk.X, padx=8, pady=8)
 
+#         self.lbl_best_info = w98_label(mf, "Mierniki najlepszego modelu:",
+#                                        font=W98['font_title'])
+#         self.lbl_best_info.grid(row=0, column=0, columnspan=4, sticky=tk.W,
+#                                 pady=(0, 6))
+
+#         metrics = [
+#             ("Accuracy: —", "lbl_acc"),
+#             ("Precision: —", "lbl_prec"),
+#             ("Recall: —", "lbl_rec"),
+#             ("F1-Score: —", "lbl_f1")
+#         ]
+
+#         for col, (text, attr) in enumerate(metrics):
+#             lbl = w98_label(mf, text, relief=tk.GROOVE, bd=1, padx=8, pady=4)
+#             lbl.grid(row=1, column=col, sticky=tk.W, padx=8, pady=2)
+#             setattr(self, attr, lbl)
+
+#         _, self.cm_frame = w98_labelframe(parent, "Macierz Pomyłek" +
+#                                           " (Confusion Matrix)")
+#         self.cm_frame.master.pack(fill=tk.BOTH, expand=True, padx=8, pady=4)
         self.lbl_best_info = tk.Label(mf, text="Mierniki najlepszego modelu:",
                                       bg=W98['bg'], fg=W98['text'], font=W98['font_title'])
         self.lbl_best_info.grid(row=0, column=0, columnspan=5, sticky=tk.W, pady=(0, 6))
@@ -589,14 +582,24 @@ class MLProjectGUI:
         self.tree_frame.master.pack(side=tk.LEFT, fill=tk.BOTH, expand=True)
 
     def build_observations_tab(self, parent):
-        w98_title_bar(parent, "Obserwacje i wnioski z eksperymentów", icon="📝")
+        w98_title_bar(parent, "Obserwacje i wnioski z eksperymentów")
 
-        paned = tk.Frame(parent, bg=W98['bg'])
+        paned = w98_frame(parent)
         paned.pack(fill=tk.BOTH, expand=True, padx=8, pady=6)
 
-        left = tk.Frame(paned, bg=W98['bg'])
+        left = w98_frame(paned)
         left.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 4))
 
+#         w98_label(left, "Automatyczne spostrzeżenia:",
+#                   bold=True).pack(anchor=tk.W, pady=(0, 2))
+
+#         auto_f, self.auto_obs_text = w98_text_area(
+#             left, mono=True, wrap=tk.WORD, state=tk.DISABLED,
+#             bg=W98['console_bg'], fg='#00ff00'
+#         )
+#         auto_f.pack(fill=tk.BOTH, expand=True)
+
+#         right = w98_frame(paned)
         w98_label(left, "Automatyczne spostrzeżenia:", bold=True).pack(anchor=tk.W, pady=(0, 2))
         auto_f = tk.Frame(left, bg=W98['console_bg'], relief=tk.SUNKEN, bd=2)
         auto_f.pack(fill=tk.BOTH, expand=True)
@@ -618,19 +621,19 @@ class MLProjectGUI:
             ("Wnioski (na podstawie obserwacji):", "wn_text"),
             ("Wnioski końcowe do projektu:", "end_text"),
         ]
+
         for caption, attr in sections:
             w98_label(right, caption, bold=True).pack(anchor=tk.W, pady=(6, 1))
-            f = tk.Frame(right, bg=W98['bg_light'], relief=tk.SUNKEN, bd=2)
-            f.pack(fill=tk.BOTH, expand=True)
-            sb2 = w98_scrollbar(f)
-            sb2.pack(side=tk.RIGHT, fill=tk.Y)
-            txt = tk.Text(f, bg=W98['bg_light'], fg=W98['text'],
-                          font=W98['font'], wrap=tk.WORD, height=5,
-                          relief=tk.FLAT, yscrollcommand=sb2.set)
-            sb2.config(command=txt.yview)
-            txt.pack(fill=tk.BOTH, expand=True, padx=2, pady=2)
-            setattr(self, attr, txt)
 
+            f, txt = w98_text_area(right, height=5, wrap=tk.WORD)
+            f.pack(fill=tk.BOTH, expand=True)
+
+#             setattr(self, attr, txt)
+#         save_btn = w98_button(right, "Zapisz raport do pliku .txt",
+#                               self.export_results, anchor=tk.W, padx=8,
+#                               pady=4, wraplength=180, justify=tk.LEFT,
+#                               height=2)
+#         save_btn.pack(fill=tk.X, pady=10)
     def _build_tab_instruction(self, parent):
         w98_title_bar(parent, "Instrukcja obsługi środowiska i interpretacji wyników", icon="📖")
 
@@ -648,7 +651,6 @@ class MLProjectGUI:
 
         instrukcja_tresc = """================================================================================
   ŚRODOWISKO EKSPERYMENTÓW ML - MANUAL I DOKUMENTACJA SYSTEMOWA
-================================================================================
 
 1. OPIS ZMIENNYCH I MIERNIKÓW JAKOŚCI (METRYK)
 --------------------------------------------------------------------------------
@@ -735,7 +737,6 @@ Aplikacja bada zachowanie algorytmu w trzech scenariuszach wyboru cech:
 * Wykres "Wizualizacja Drzewa" (Karta: Najlepszy Model):
   Rysunek struktury decyzyjnej do poziomu głębokości 3. Pozwala prześledzić kryteria 
   oraz progi logiczne, jakimi kierował się zwycięski model podczas podziału danych.
-================================================================================"""
 
         txt.insert(tk.END, instrukcja_tresc)
         txt.config(state=tk.DISABLED)
@@ -748,6 +749,7 @@ Aplikacja bada zachowanie algorytmu w trzech scenariuszach wyboru cech:
         self.console.config(state=tk.NORMAL)
         self.console.insert(tk.END, f"> {message}\n")
         self.console.see(tk.END)
+        self.console.config(state=tk.DISABLED)
         self.root.update()
 
     def clear_log(self):
@@ -759,7 +761,8 @@ Aplikacja bada zachowanie algorytmu w trzech scenariuszach wyboru cech:
     # ─────────────────────────────────────────────────────────────────────
 
     def load_data(self):
-        filepath = filedialog.askopenfilename(filetypes=[("CSV Files", "*.csv")])
+        filepath = filedialog.askopenfilename(filetypes=[("CSV Files",
+                                                          "*.csv")])
         if not filepath:
             return
         self.set_status(f"Wczytywanie: {filepath}")
@@ -781,6 +784,24 @@ Aplikacja bada zachowanie algorytmu w trzech scenariuszach wyboru cech:
         self.popup.grab_set()
         self.popup.resizable(False, False)
 
+#        w98_title_bar(self.popup, "Wybierz kolumny do usunięcia")
+#
+#        w98_label(self.popup, "Zaznacz kolumny, które chcesz ZIGNOROWAĆ " +
+#                  "(usunąć).", bold=True).pack(pady=(8, 2), padx=10,
+#                                               anchor=tk.W)
+#        w98_label(self.popup, "Ostatnia niezaznaczona kolumna = kolumna " +
+#                  "docelowa (Target).").pack(padx=10, anchor=tk.W)
+#
+#        list_frame, self.col_listbox = (
+#            w98_scrolled_listbox(self.popup, selectmode=tk.MULTIPLE)
+#        )
+#        list_frame.pack(fill=tk.BOTH, expand=True, padx=10, pady=8)
+#
+#        self.col_listbox.insert(tk.END, *self.temp_raw_df.columns)
+#
+#        w98_separator(self.popup)
+#
+#        bf = w98_frame(self.popup)
         w98_title_bar(self.popup, "Wybierz kolumny do usunięcia", icon="🗂")
         w98_label(self.popup,
                   "Zaznacz kolumny, które chcesz ZIGNOROWAĆ (usunąć).", bold=True).pack(
@@ -802,9 +823,11 @@ Aplikacja bada zachowanie algorytmu w trzech scenariuszach wyboru cech:
         w98_separator(self.popup)
         bf = tk.Frame(self.popup, bg=W98['bg'])
         bf.pack(fill=tk.X, padx=10, pady=8)
-        w98_button(bf, "✔  Zatwierdź", self.apply_column_selection, width=16).pack(
-            side=tk.LEFT, padx=(0, 8))
-        w98_button(bf, "✖  Anuluj", self._cancel_load, width=16).pack(side=tk.LEFT)
+
+        w98_button(bf, "✔  Zatwierdź", self.apply_column_selection,
+                   width=16).pack(side=tk.LEFT, padx=(0, 8))
+        w98_button(bf, "✖  Anuluj", self._cancel_load,
+                   width=16).pack(side=tk.LEFT)
 
     def _cancel_load(self):
         self.temp_raw_df = None
@@ -814,14 +837,13 @@ Aplikacja bada zachowanie algorytmu w trzech scenariuszach wyboru cech:
 
     def apply_column_selection(self):
         sel = self.col_listbox.curselection()
-        to_drop = [self.col_listbox.get(i) for i in sel]
-        if to_drop:
+        if sel:
+            to_drop = [self.col_listbox.get(i) for i in sel]
             self.temp_raw_df.drop(columns=to_drop, inplace=True)
             self.log(f"Usunięto kolumny: {', '.join(to_drop)}")
 
         missing_before = self.temp_raw_df.isnull().sum().sum()
-        numeric_before = self.temp_raw_df.select_dtypes(include=[np.number]).shape[1]
-        object_before = self.temp_raw_df.select_dtypes(include=['object']).shape[1]
+        dtypes = self.temp_raw_df.dtypes
 
         self.df = self.temp_raw_df.select_dtypes(include=[np.number]).dropna()
 
@@ -838,23 +860,40 @@ Aplikacja bada zachowanie algorytmu w trzech scenariuszach wyboru cech:
             self._meta = {
                 'rows': r, 'features': c - 1, 'target': target,
                 'missing': missing_before,
-                'numeric': numeric_before, 'object': object_before
+                'numeric': sum(dtypes != 'object'),
+                'object': sum(dtypes == 'object')
             }
-            self.log(f"Zbiór gotowy: {r:,} rekordów, {c - 1} cech + cel '{target}'.")
-            self.set_status(f"Wczytano: {r:,} rekordów, {c - 1} cech, cel: '{target}'")
+            msg = f"Zbiór gotowy: {r:,} rekordów, {c-1} cech + cel '{target}'."
+            self.log(msg)
+            self.set_status(msg)
 
         self.temp_raw_df = None
         self.popup.destroy()
 
     # ─────────────────────────────────────────────────────────────────────
     # ANALIZA DANYCH
-    # ─────────────────────────────────────────────────────────────────────
-
+    # ═══════════════════════════════════════════════════════════════════════
     def analyze_data(self):
         if self.df is None:
-            messagebox.showwarning("Uwaga", "Najpierw wczytaj dane (krok 1)!")
-            return
+            return messagebox.showwarning("Uwaga",
+                                          "Najpierw wczytaj dane (krok 1)!")
 
+#        m, target_col = self._meta, self._meta['target']
+#        class_pct = self.df[target_col].value_counts(normalize=True) * 100
+#
+#        self.lbl_records.config(text=f"{m['rows']:,}")
+#        self.lbl_features.config(text=f"{m['features']}")
+#        self.lbl_types.config(
+#            text=(f"numeryczne: {m['numeric']}, tekstowe (wykluczone): " +
+#                  f"{m['object']}"))
+#        self.lbl_missing.config(text=f"{m['missing']:,}")
+#        self.lbl_target.config(text=f"'{target_col}'  ({len(class_pct)} klas)")
+#
+#        balance_str = ",  ".join([f"'{k}': {v:.1f}%"
+#                                  for k, v in class_pct.items()])
+#        self.lbl_balance.config(text=balance_str)
+#
+#        stats = self.df.drop(columns=[target_col]).describe().T.round(4)
         m = self._meta
         target_col = m['target']
         class_counts = self.df[target_col].value_counts()
@@ -872,23 +911,33 @@ Aplikacja bada zachowanie algorytmu w trzech scenariuszach wyboru cech:
         stats = self.df.iloc[:, :-1].describe().T[
             ['mean', 'std', 'min', '25%', '50%', '75%', 'max']].round(4)
         self.stats_tree.delete(*self.stats_tree.get_children())
-        cols = ['Cecha'] + list(stats.columns)
-        self.stats_tree['columns'] = cols
-        self.stats_tree['show'] = 'headings'
+
+        self.stats_tree.config(columns=['Cecha', *stats.columns],
+                               show='headings')
         self.stats_tree.heading('Cecha', text='Cecha')
         self.stats_tree.column('Cecha', width=160, anchor=tk.W)
+
         for c in stats.columns:
             self.stats_tree.heading(c, text=c)
             self.stats_tree.column(c, width=85, anchor=tk.CENTER)
+
         for feat, row in stats.iterrows():
-            self.stats_tree.insert('', tk.END, values=[feat] + list(row))
+            self.stats_tree.insert('', tk.END, values=[feat, *row])
 
         for w in self.class_chart_frame.winfo_children():
             w.destroy()
 
-        fig, ax = plt.subplots(figsize=(6, 2.2))
-        fig.patch.set_facecolor('#c0c0c0')
+        fig, ax = plt.subplots(figsize=(6, 2.2), facecolor='#c0c0c0')
+        ax.set(facecolor='#ffffff', title="Rozkład klas", ylabel="%")
+
         ax.set_facecolor('#ffffff')
+
+#        bars = ax.bar(class_pct.index.astype(str), class_pct.values,
+#                      edgecolor='black', linewidth=0.8,
+#                      color=['#000080', '#808080', '#c0c0c0',
+#                             '#008080', '#800000'])
+
+#        ax.bar_label(bars, fmt='%.1f%%', fontsize=7, padding=2)
         colors = ['#000080', '#808080', '#c0c0c0', '#008080', '#800000']
         bars = ax.bar([str(k) for k in class_counts.index],
                       class_pct.values,
@@ -905,8 +954,8 @@ Aplikacja bada zachowanie algorytmu w trzech scenariuszach wyboru cech:
         plt.close(fig)
 
         if any(v < 30.0 for v in class_pct.values):
-            self.log("OSTRZEŻENIE: Niezbalansowanie klas! "
-                     "Zwróć uwagę na Recall i Precision.")
+            self.log("OSTRZEŻENIE: Niezbalansowanie klas! Zwróć uwagę " +
+                     "na Recall i Precision.")
 
         self.log("Analiza zakończona.")
         self.set_status("Analiza danych zakończona.")
@@ -918,8 +967,8 @@ Aplikacja bada zachowanie algorytmu w trzech scenariuszach wyboru cech:
 
     def select_features(self):
         if self.df is None:
-            messagebox.showwarning("Uwaga", "Najpierw wczytaj dane (krok 1)!")
-            return
+            return messagebox.showwarning("Uwaga",
+                                          "Najpierw wczytaj dane (krok 1)!")
 
         self.log("Selekcja cech — SelectKBest / f_classif ...")
         self.set_status("Obliczanie ważności cech...")
@@ -928,29 +977,25 @@ Aplikacja bada zachowanie algorytmu w trzech scenariuszach wyboru cech:
         y = self.df.iloc[:, -1]
         n = len(X.columns)
 
-        selector = SelectKBest(score_func=f_classif, k='all')
-        selector.fit(X, y)
+        selector = SelectKBest(score_func=f_classif, k='all').fit(X, y)
         scores = selector.scores_
         self.feature_scores = dict(zip(X.columns, scores))
+        best_idx = np.argsort(scores)[::-1]
 
-        self.branches['Gałąź 1'] = list(X.columns)
+        self.branches = {
+            'Gałąź 1': list(X.columns),
+            'Gałąź 2': list(X.columns[np.sort(best_idx[:max(1, n // 2)])]),
+            'Gałąź 3': list(X.columns[np.sort(best_idx[:max(1,
+                                                            int(n * 0.2))])])
+        }
 
-        k50 = max(1, n // 2)
-        top50_idx = np.argsort(scores)[::-1][:k50]
-        self.branches['Gałąź 2'] = list(X.columns[np.sort(top50_idx)])
-
-        k20 = max(1, int(n * 0.2))
-        top20_idx = np.argsort(scores)[::-1][:k20]
-        self.branches['Gałąź 3'] = list(X.columns[np.sort(top20_idx)])
-
-        for i, (_, feats) in enumerate(self.branches.items()):
+        for i, feats in enumerate(self.branches.values()):
             self.listboxes[i].delete(0, tk.END)
-            for f in feats:
-                self.listboxes[i].insert(tk.END, f)
+            self.listboxes[i].insert(tk.END, *feats)
 
-        self.log(f"Gałąź 1: {len(self.branches['Gałąź 1'])} | "
-                 f"Gałąź 2: {len(self.branches['Gałąź 2'])} | "
-                 f"Gałąź 3: {len(self.branches['Gałąź 3'])} cech.")
+        counts = [f"G{i+1}: {len(feats)}" for i, feats in
+                  enumerate(self.branches.values())]
+        self.log(f"Wybrane cechy — {' | '.join(counts)}")
 
         self._draw_feature_importance()
         self.set_status("Selekcja cech zakończona — 3 gałęzie gotowe.")
@@ -960,6 +1005,26 @@ Aplikacja bada zachowanie algorytmu w trzech scenariuszach wyboru cech:
         for w in self.feat_chart_frame.winfo_children():
             w.destroy()
 
+        # top_feats = sorted(self.feature_scores.items(), key=lambda x: x[1],
+        #                    reverse=True)[:20]
+        # if not top_feats:
+        #     return
+
+        # names, values = zip(*top_feats)
+        # n = len(names)
+
+        # fig, ax = plt.subplots(figsize=(8, max(2.5, n * 0.3)),
+        #                        facecolor='#c0c0c0')
+        # ax.set(
+        #     facecolor='#ffffff',
+        #     title="Ważność cech — SelectKBest (f_classif)", xlabel="Score")
+
+        # colors = ['#000080' if i < max(1, n // 5) else
+        #           '#808080' if i < n // 2 else '#c0c0c0'
+        #           for i in range(n)]
+
+        # ax.barh(names, values, color=colors, edgecolor='black', linewidth=0.5)
+        # ax.invert_yaxis()
         sorted_feats = sorted(self.feature_scores.items(),
                               key=lambda x: x[1], reverse=True)[:20]
         names = [f[0] for f in sorted_feats]
@@ -987,7 +1052,8 @@ Aplikacja bada zachowanie algorytmu w trzech scenariuszach wyboru cech:
 
     def ask_experiment_count(self):
         if not self.branches:
-            messagebox.showwarning("Uwaga", "Najpierw wykonaj wybór cech (krok 3)!")
+            messagebox.showwarning("Uwaga",
+                                   "Najpierw wykonaj wybór cech (krok 3)!")
             return
 
         popup = tk.Toplevel(self.root)
@@ -997,11 +1063,19 @@ Aplikacja bada zachowanie algorytmu w trzech scenariuszach wyboru cech:
         popup.resizable(False, False)
         popup.grab_set()
 
-        w98_title_bar(popup, "Konfiguracja eksperymentów", icon="⚙")
+        w98_title_bar(popup, "Konfiguracja eksperymentów")
 
-        cf = tk.Frame(popup, bg=W98['bg'])
+        cf = w98_frame(popup)
         cf.pack(fill=tk.BOTH, expand=True, padx=14, pady=10)
 
+#        w98_label(cf, "Skonfiguruj parametry startowe algorytmu.",
+#                  bold=True).pack(anchor=tk.W, pady=(0, 8))
+
+        # 1. PARAMETR: Liczba eksperymentów
+#        row1 = w98_frame(cf)
+#        row1.pack(fill=tk.X)
+#        w98_label(row1, "Liczba eksperymentów:").pack(side=tk.LEFT)
+#        var_exp = tk.StringVar(value="30")
         w98_label(cf, "Podaj łączną liczbę eksperymentów (min. 30).\n"
                       "Zostaną równo podzielone na 3 gałęzie.").pack(anchor=tk.W, pady=(0, 8))
 
@@ -1010,10 +1084,37 @@ Aplikacja bada zachowanie algorytmu w trzech scenariuszach wyboru cech:
         w98_label(row, "Liczba eksperymentów:").pack(side=tk.LEFT)
         var = tk.StringVar(value="30")
         vcmd = (self.root.register(lambda v: v == "" or v.isdigit()), '%P')
-        entry = w98_entry(row, textvariable=var, width=7,
-                          validate='key', validatecommand=vcmd)
+        entry = w98_entry(row1, textvariable=var_exp, width=7, validate='key',
+                          validatecommand=vcmd)
         entry.pack(side=tk.LEFT, padx=8)
 
+        # lbl_hint = w98_label(row1, "Na gałąź: ~10", fg=W98['disabled'])
+        # lbl_hint.pack(side=tk.LEFT, padx=4)
+
+        # # 2. PARAMETR: Kryterium podziału
+        # row2 = w98_frame(cf)
+        # row2.pack(fill=tk.X, pady=(8, 0))
+        # w98_label(row2, "Kryterium drzewa:").pack(side=tk.LEFT)
+        # var_crit = tk.StringVar(value="gini")
+        # cb_crit = ttk.Combobox(row2, textvariable=var_crit,
+        #                        values=["gini", "entropy"],
+        #                        state="readonly", width=10)
+        # cb_crit.pack(side=tk.LEFT, padx=(22, 8))
+
+        # # 3. PARAMETR: Zbiór testowy
+        # row3 = w98_frame(cf)
+        # row3.pack(fill=tk.X, pady=(8, 0))
+        # w98_label(row3, "Rozmiar testowy:").pack(side=tk.LEFT)
+        # var_test = tk.StringVar(value="0.3")
+        # cb_test = ttk.Combobox(row3, textvariable=var_test,
+        #                        values=["0.2", "0.3", "0.4"],
+        #                        state="readonly", width=10)
+        # cb_test.pack(side=tk.LEFT, padx=(24, 8))
+
+        # def update_hint(*_):
+        #     try:
+        #         lbl_hint.config(text=("Na gałąź: ~" +
+        #                               f"{max(1, int(var_exp.get())//3)}"))
         lbl_hint = tk.Label(cf, text="Na gałąź: ~10", bg=W98['bg'],
                             fg=W98['disabled'], font=W98['font'])
         lbl_hint.pack(anchor=tk.W, pady=(4, 0))
@@ -1032,22 +1133,27 @@ Aplikacja bada zachowanie algorytmu w trzech scenariuszach wyboru cech:
             except ValueError:
                 lbl_hint.config(text="Na gałąź: —")
 
-        var.trace_add("write", update_hint)
+        var_exp.trace_add("write", update_hint)
 
         w98_separator(cf)
 
         def confirm():
-            raw = var.get().strip()
-            if not raw or not raw.isdigit() or int(raw) < 1:
-                messagebox.showwarning("Błąd", "Podaj liczbę całkowitą > 0.", parent=popup)
+            raw = var_exp.get().strip()
+            if not raw or not raw.isdigit() or int(raw) < 29:
+                messagebox.showwarning("Błąd",
+                                       "Podaj liczbę całkowitą min 30.",
+                                       parent=popup)
                 return
             do_cv = cv_var.get()
             popup.destroy()
+#            self.run_experiments(int(raw), criterion=var_crit.get(),
+                                 test_size=float(var_test.get()))
             self.run_experiments(int(raw), do_cv=do_cv)
 
-        bf = tk.Frame(cf, bg=W98['bg'])
+        bf = w98_frame(cf)
         bf.pack(fill=tk.X, pady=(10, 0))
-        w98_button(bf, "▶  Uruchom", confirm, width=14).pack(side=tk.LEFT, padx=(0, 8))
+        w98_button(bf, "▶  Uruchom", confirm, width=14).pack(side=tk.LEFT,
+                                                             padx=(0, 8))
         w98_button(bf, "Anuluj", popup.destroy, width=10).pack(side=tk.LEFT)
 
         entry.focus_set()
@@ -1055,6 +1161,7 @@ Aplikacja bada zachowanie algorytmu w trzech scenariuszach wyboru cech:
         popup.bind("<Return>", lambda e: confirm())
         popup.bind("<Escape>", lambda e: popup.destroy())
 
+    # def run_experiments(self, total=30, criterion='gini', test_size=0.3):
     # ─────────────────────────────────────────────────────────────────────
     # EKSPERYMENTY
     # ─────────────────────────────────────────────────────────────────────
@@ -1063,20 +1170,64 @@ Aplikacja bada zachowanie algorytmu w trzech scenariuszach wyboru cech:
         n_per_branch = max(1, total // 3)
         actual_total = n_per_branch * 3
 
-        self.log(f"Start: {actual_total} eksperymentów ({n_per_branch}/gałąź × 3)...")
-        self.set_status(f"Trwa {actual_total} eksperymentów...")
+        self.last_total_exp = actual_total
+        self.last_criterion = criterion
+        self.last_test_size = test_size
+
         self.all_results = []
         self.results_tree.delete(*self.results_tree.get_children())
+        msg = (
+            f"Start: {actual_total} eksperymentów " +
+            f"({n_per_branch}/gałąź x 3). " +
+            f"Kryterium: {criterion}, Test size: {test_size}"
+        )
+        self.log(msg)
+        self.set_status(f"Trwa {actual_total} eksperymentów...")
 
-        y = self.df.iloc[:, -1]
+        y = self.df[self._meta['target']]
 
-        if n_per_branch == 1:
-            depths = [5]
-        else:
-            depths = sorted(set(np.linspace(1, 30, n_per_branch, dtype=int).tolist()))[:n_per_branch]
+        depths = [5] if n_per_branch == 1 else np.unique(np.linspace(
+            1, 30, n_per_branch, dtype=int))
 
         exp_nr = 1
         best_acc = -1
+        # best_result, best_cm = None, None
+
+        # for branch_name, features in self.branches.items():
+        #     X = self.df[features]
+
+        #     (X_train, X_test,
+        #      y_train, y_test) = train_test_split(X, y, test_size=test_size,
+        #                                          random_state=42)
+
+        #     for depth in depths:
+        #         model = DecisionTreeClassifier(max_depth=int(depth),
+        #                                        criterion=criterion,
+        #                                        random_state=42)
+        #         model.fit(X_train, y_train)
+        #         y_pred = model.predict(X_test)
+
+        #         acc = accuracy_score(y_test, y_pred)
+        #         prec = precision_score(y_test, y_pred, average='weighted',
+        #                                zero_division=0)
+        #         rec = recall_score(y_test, y_pred, average='weighted',
+        #                            zero_division=0)
+        #         f1 = f1_score(y_test, y_pred, average='weighted',
+        #                       zero_division=0)
+
+        #         result = {'nr': exp_nr, 'branch': branch_name,
+        #                   'depth': int(depth), 'acc': acc, 'prec': prec,
+        #                   'rec': rec, 'f1': f1, 'classes': model.classes_}
+        #         self.all_results.append(result)
+
+        #         msg = (f"Exp {exp_nr:>3}/{actual_total} | {branch_name} " +
+        #                f"depth={int(depth):>2} | Acc={acc*100:.1f}% " +
+        #                f"Prec={prec*100:.1f}% Rec={rec*100:.1f}% " +
+        #                f"F1={f1*100:.1f}%"
+        #                )
+        #         self.log(msg)
+        #         self.set_status(f"Eksperyment {exp_nr}/{actual_total} " +
+        #                         f"— {branch_name}, depth={int(depth)}")
         best_result = None
         best_cm = None
         best_model = None
@@ -1128,6 +1279,14 @@ Aplikacja bada zachowanie algorytmu w trzech scenariuszach wyboru cech:
 
                 exp_nr += 1
 
+#        msg = (f"Najlepszy: {best_result['branch']}, " +
+#               f"depth={best_result['depth']}, " +
+#               f"Acc={best_result['acc']*100:.2f}%"
+#               )
+
+#        self.log(f"=== ZAKOŃCZONO {actual_total} EKSPERYMENTÓW ===")
+#        self.log(msg)
+#        self.set_status(f"Zakończono! {msg}")
         self.set_progress(100, "Zakończono!")
         self.log(f"=== ZAKOŃCZONO {actual_total} EKSPERYMENTÓW ===")
         self.log(f"Najlepszy: {best_result['branch']} depth={best_result['depth']} "
@@ -1171,10 +1330,14 @@ Aplikacja bada zachowanie algorytmu w trzech scenariuszach wyboru cech:
 
     def _fill_results_table(self, best_result):
         self.results_tree.delete(*self.results_tree.get_children())
-        tag_map = {'Gałąź 1': 'branch1', 'Gałąź 2': 'branch2', 'Gałąź 3': 'branch3'}
+        tag_map = {'Gałąź 1': 'branch1', 'Gałąź 2': 'branch2',
+                   'Gałąź 3': 'branch3'}
         for r in self.all_results:
             if r['nr'] == best_result['nr']:
                 tag = 'best'
+#            else:
+#                tag = None
+#                tag_map.get(r['branch'], 'branch1')
             elif r['overfit']:
                 tag = 'overfit'
             else:
@@ -1199,13 +1362,10 @@ Aplikacja bada zachowanie algorytmu w trzech scenariuszach wyboru cech:
         fig.patch.set_facecolor('#c0c0c0')
         gs = gridspec.GridSpec(2, 3, figure=fig, hspace=0.5, wspace=0.35)
 
-        metrics = [
-            ('acc', 'Accuracy (test)'),
-            ('prec', 'Precision'),
-            ('rec', 'Recall'),
-            ('f1', 'F1-Score'),
-        ]
-        branch_colors = {'Gałąź 1': '#000080', 'Gałąź 2': '#008000', 'Gałąź 3': '#800000'}
+        metrics = [('acc', 'Accuracy'), ('prec', 'Precision'),
+                   ('rec', 'Recall'), ('f1', 'F1-Score')]
+        branch_colors = {'Gałąź 1': '#000080', 'Gałąź 2': '#008000',
+                         'Gałąź 3': '#800000'}
 
         for idx, (mk, mn) in enumerate(metrics):
             ax = fig.add_subplot(gs[idx // 3, idx % 3])
@@ -1269,6 +1429,14 @@ Aplikacja bada zachowanie algorytmu w trzech scenariuszach wyboru cech:
         canvas.get_tk_widget().pack(fill=tk.BOTH, expand=True)
         plt.close(fig)
 
+#    def _update_best_model(self, best, cm):
+#        self.lbl_best_info.config(
+#            text=(f"  Najlepszy model: {best['branch']}, " +
+#                  f"max_depth={best['depth']}  "))
+#        self.lbl_acc.config(text=f"  Accuracy:  {best['acc']*100:.2f}%  ")
+#        self.lbl_prec.config(text=f"  Precision: {best['prec']*100:.2f}%  ")
+#        self.lbl_rec.config(text=f"  Recall:    {best['rec']*100:.2f}%  ")
+#        self.lbl_f1.config(text=f"  F1-Score:  {best['f1']*100:.2f}%  ")
     # ─────────────────────────────────────────────────────────────────────
     # KRZYWA UCZENIA
     # ─────────────────────────────────────────────────────────────────────
@@ -1303,6 +1471,11 @@ Aplikacja bada zachowanie algorytmu w trzech scenariuszach wyboru cech:
 
         fig, (ax1, ax2) = plt.subplots(1, 2, figsize=(13, 5))
         fig.patch.set_facecolor('#c0c0c0')
+#        ax.set_facecolor('#ffffff')
+#        disp = ConfusionMatrixDisplay(confusion_matrix=cm,
+#                                      display_labels=best['classes'])
+#        disp.plot(cmap='Blues', ax=ax, values_format='d')
+#        ax.set_title("Macierz Pomyłek (Najlepszy Model)", fontsize=9)
 
         ax1.set_facecolor('#ffffff')
         ax1.plot(train_sizes_abs, train_accs, 'o-', color='#000080',
@@ -1408,6 +1581,11 @@ Aplikacja bada zachowanie algorytmu w trzech scenariuszach wyboru cech:
         if not self.all_results:
             return
 
+#        def fm(r):
+#            return (
+#                f"Acc={r['acc']*100:.2f}%  Prec={r['prec']*100:.2f}% " +
+#                f"Rec={r['rec']*100:.2f}%  F1={r['f1']*100:.2f}%"
+#            )
         lines = []
         lines.append("=" * 60)
         lines.append("  AUTOMATYCZNE SPOSTRZEZENIA Z EKSPERYMENTOW")
@@ -1416,6 +1594,62 @@ Aplikacja bada zachowanie algorytmu w trzech scenariuszach wyboru cech:
 
         best = max(self.all_results, key=lambda r: r['acc'])
         worst = min(self.all_results, key=lambda r: r['acc'])
+
+#        lines = [
+#            "=" * 58, "RAPORT Z EKSPERYMENTÓW",
+#            "=" * 58, "",
+#            f"[+] Najlepszy: {best['branch']}, depth={best['depth']}\n" +
+#            f"    {fm(best)}\n",
+#            f"[-] Najgorszy: {worst['branch']}, depth={worst['depth']}\n" +
+#            f"    {fm(worst)}\n",
+#            "-" * 58, "  ŚREDNIE PER GAŁĄŹ:", "-" * 58
+#        ]
+
+#        avg_accs = {}
+#        for b_name, features in self.branches.items():
+#            br = [r for r in self.all_results if r['branch'] == b_name]
+#            if not br:
+#                continue
+
+#            avgs = {k: np.mean([r[k] for r in br]) for k in ('acc', 'prec',
+#                                                            'rec', 'f1')}
+#            avg_accs[b_name] = avgs['acc'] * 100
+
+#            lines.append(f"  {b_name} ({len(features)} cech):\n    {fm(avgs)}")
+
+#        lines.extend(["", "-" * 58, "  WPŁYW max_depth NA ACCURACY:",
+#                      "-" * 58])
+
+#        for b_name in self.branches:
+#            br = sorted([r for r in self.all_results if r['branch'] == b_name],
+#                        key=lambda r: r['depth'])
+#            if len(br) < 2:
+#                continue
+
+#            f_acc, l_acc = br[0]['acc'] * 100, br[-1]['acc'] * 100
+#            peak = max(br, key=lambda r: r['acc'])
+#            trend = ("rośnie" if l_acc > f_acc else
+#                     "maleje" if l_acc < f_acc else
+#                     "stabilna")
+
+#            lines.append(
+#                f"{b_name}: trend={trend}, depth {br[0]['depth']}" +
+#                f"->{br[-1]['depth']}: "
+#                f"{f_acc:.1f}%->{l_acc:.1f}%, szczyt=depth{peak['depth']} " +
+#                f"({peak['acc']*100:.2f}%)"
+#                )
+
+#        branch_names = list(self.branches.keys())
+#        if len(branch_names) >= 3:
+#            b1, b2, b3 = branch_names[:3]
+#            diff2 = avg_accs[b1] - avg_accs[b2]
+#            diff3 = avg_accs[b1] - avg_accs[b3]
+
+#            lines.extend([
+#                "", "-" * 58, "  WPŁYW REDUKCJI CECH:", "-" * 58,
+#                f"  {b1} vs {b2} (top 50%): {diff2:+.2f}%",
+#                f"  {b1} vs {b3} (top 20%): {diff3:+.2f}%"
+#            ])
 
         lines.append(f"[+] Najlepszy: {best['branch']}, depth={best['depth']}")
         lines.append(f"    Acc={best['acc'] * 100:.2f}%  Prec={best['prec'] * 100:.2f}%"
@@ -1478,16 +1712,15 @@ Aplikacja bada zachowanie algorytmu w trzech scenariuszach wyboru cech:
             lines.append(f"  G1 vs G2 (top 50%): {avg_accs[b1] - avg_accs[b2]:+.2f}%")
             lines.append(f"  G1 vs G3 (top 20%): {avg_accs[b1] - avg_accs[b3]:+.2f}%")
             if avg_accs[b2] > avg_accs[b1]:
-                lines.append("  => Selekcja cech POPRAWILA wynik.")
+                lines.append("  => Selekcja cech POPRAWIŁA wynik.")
             elif avg_accs[b2] < avg_accs[b1] - 2:
-                lines.append("  => Selekcja cech POGORSZYLA wynik.")
+                lines.append("  => Selekcja cech POGORSZYŁA wynik.")
             else:
-                lines.append("  => Wplyw selekcji byl MINIMALNY.")
+                lines.append("  => Wpływ selekcji był MINIMALNY.")
 
-        lines.append("")
-        lines.append("=" * 60)
-        lines.append("  Uzupelnij wnioski w polach po prawej stronie.")
-        lines.append("=" * 60)
+        lines.extend(["", "=" * 58,
+                      "  Uzupełnij wnioski w polach po prawej stronie.",
+                      "=" * 58])
 
         self.auto_obs_text.config(state=tk.NORMAL)
         self.auto_obs_text.delete('1.0', tk.END)
@@ -1571,6 +1804,66 @@ Aplikacja bada zachowanie algorytmu w trzech scenariuszach wyboru cech:
             messagebox.showinfo("Sukces", f"Plik zapisany:\n{path}")
         except Exception as e:
             messagebox.showerror("Błąd eksportu", str(e))
+
+    def export_results(self):
+        if not self.all_results:
+            return messagebox.showwarning("Uwaga", "Brak wyników do zapisu!")
+
+        filepath = filedialog.asksaveasfilename(
+            defaultextension=".txt",
+            filetypes=[("Text Files", "*.txt")],
+            title="Zapisz raport z eksperymentów"
+        )
+
+        if not filepath:
+            return
+
+        # najlepszy model
+        best = max(self.all_results, key=lambda r: r['acc'])
+
+        # dpowiedzi użytkownika
+        obs = self.obs_text.get('1.0', tk.END).strip()
+        wn = self.wn_text.get('1.0', tk.END).strip()
+        end = self.end_text.get('1.0', tk.END).strip()
+
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write("=" * 30 + "\n")
+            f.write("  RAPORT\n")
+            f.write("=" * 30 + "\n\n")
+
+            f.write("1. DANE\n")
+            f.write("-" * 30 + "\n")
+            f.write(f"Rekordy: {self._meta['rows']}\n")
+            f.write(f"Cechy startowe: {self._meta['features']}\n")
+            f.write(f"Kolumna docelowa (cel): {self._meta['target']}\n\n")
+
+            f.write("2. PARAMETRY/ZMIENNE \n")
+            f.write("-" * 30 + "\n")
+            f.write("Wykonanych eksperymentów: " +
+                    f"{getattr(self, 'last_total_exp', 'Brak')}\n")
+            f.write("Kryterium podziału (criterion): " +
+                    f"{getattr(self, 'last_criterion', 'Brak')}\n")
+            f.write("Rozmiar zbioru testowego (test_size): " +
+                    f"{getattr(self, 'last_test_size', 'Brak')}\n\n")
+
+            f.write("3. WYNIK I OCENA SKUTECZNOŚCI\n")
+            f.write("-" * 30 + "\n")
+            f.write(f"Struktura wejściowa: {best['branch']}\n")
+            f.write(f"Optymalny koszt (max_depth): {best['depth']}\n")
+            f.write(f"Accuracy:  {best['acc']*100:.2f}%\n")
+            f.write(f"Precision: {best['prec']*100:.2f}%\n")
+            f.write(f"Recall:    {best['rec']*100:.2f}%\n")
+            f.write(f"F1-Score:  {best['f1']*100:.2f}%\n\n")
+
+            f.write("4. WŁASNE SPOSTRZEŻENIA I WNIOSKI UŻYTKOWNIKA\n")
+            f.write("-" * 30 + "\n")
+            f.write(f"[Obserwacje]:\n{obs if obs else '---'}\n\n")
+            f.write("[Wnioski na podstawie obserwacji]:\n" +
+                    f"{wn if wn else '---'}\n\n")
+            f.write(f"[Wnioski końcowe]:\n{end if end else '---'}\n")
+
+        self.log(f"Zapisano raport do pliku: {filepath}")
+        self.set_status("Raport został pomyślnie zapisany.")
 
 
 if __name__ == "__main__":
