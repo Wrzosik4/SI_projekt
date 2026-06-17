@@ -205,7 +205,8 @@ class MLProjectGUI:
 
         # ── TAB 4: Wykresy
         self.tab_charts = self.notebook.add("Wykresy Porównawcze")
-        self.compare_chart_frame = w98_frame(self.tab_charts, bg=W98['bg_light'])
+        self.compare_chart_frame = w98_frame(self.tab_charts,
+                                             bg=W98['bg_light'])
         self.compare_chart_frame.pack(fill=tk.BOTH, expand=True)
 
         # ── TAB 5: Najlepszy model
@@ -279,7 +280,8 @@ class MLProjectGUI:
         _, self.feat_chart_frame = w98_labelframe(parent, "Ważność cech — " +
                                                   "SelectKBest (f_classif " +
                                                   "score)")
-        self.feat_chart_frame.master.pack(fill=tk.BOTH, expand=True, padx=8, pady=4)
+        self.feat_chart_frame.master.pack(fill=tk.BOTH, expand=True,
+                                          padx=8, pady=4)
 
     def _build_tab_table(self, parent):
         w98_title_bar(parent, "Wyniki wszystkich eksperymentów")
@@ -339,7 +341,8 @@ class MLProjectGUI:
         left = w98_frame(paned)
         left.pack(side=tk.LEFT, fill=tk.BOTH, expand=True, padx=(0, 4))
 
-        w98_label(left, "Automatyczne spostrzeżenia:", bold=True).pack(anchor=tk.W, pady=(0, 2))
+        w98_label(left, "Automatyczne spostrzeżenia:",
+                  bold=True).pack(anchor=tk.W, pady=(0, 2))
 
         auto_f, self.auto_obs_text = w98_text_area(
             left, mono=True, wrap=tk.WORD, state=tk.DISABLED,
@@ -363,6 +366,11 @@ class MLProjectGUI:
             f.pack(fill=tk.BOTH, expand=True)
 
             setattr(self, attr, txt)
+        save_btn = w98_button(right, "Zapisz raport do pliku .txt",
+                              self.export_results, anchor=tk.W, padx=8,
+                              pady=4, wraplength=180, justify=tk.LEFT,
+                              height=2)
+        save_btn.pack(fill=tk.X, pady=10)
 
     def log(self, message):
         self.console.config(state=tk.NORMAL)
@@ -538,7 +546,8 @@ class MLProjectGUI:
 
     def select_features(self):
         if self.df is None:
-            return messagebox.showwarning("Uwaga", "Najpierw wczytaj dane (krok 1)!")
+            return messagebox.showwarning("Uwaga",
+                                          "Najpierw wczytaj dane (krok 1)!")
 
         self.log("Selekcja cech — SelectKBest / f_classif ...")
         self.set_status("Obliczanie ważności cech...")
@@ -604,7 +613,6 @@ class MLProjectGUI:
     # ═══════════════════════════════════════════════════════════════════════
     # OKIENKO LICZBY EKSPERYMENTÓW
     # ═══════════════════════════════════════════════════════════════════════
-
     def ask_experiment_count(self):
         if not self.branches:
             messagebox.showwarning("Uwaga",
@@ -613,7 +621,7 @@ class MLProjectGUI:
 
         popup = tk.Toplevel(self.root)
         popup.title("Uruchom eksperymenty")
-        popup.geometry("380x240")
+        popup.geometry("380x280")
         popup.configure(bg=W98['bg'])
         popup.resizable(False, False)
         popup.grab_set()
@@ -623,43 +631,63 @@ class MLProjectGUI:
         cf = w98_frame(popup)
         cf.pack(fill=tk.BOTH, expand=True, padx=14, pady=10)
 
-        w98_label(cf, "Podaj łączną liczbę eksperymentów (min. 30).\n" +
-                  "Zostaną równo podzielone na 3 gałęzie.",
-                  bold=False).pack(anchor=tk.W, pady=(0, 12))
+        w98_label(cf, "Skonfiguruj parametry startowe algorytmu.",
+                  bold=True).pack(anchor=tk.W, pady=(0, 8))
 
-        row = w98_frame(cf)
-        row.pack(fill=tk.X)
-        w98_label(row, "Liczba eksperymentów:").pack(side=tk.LEFT)
-
-        var = tk.StringVar(value="30")
+        # 1. PARAMETR: Liczba eksperymentów
+        row1 = w98_frame(cf)
+        row1.pack(fill=tk.X)
+        w98_label(row1, "Liczba eksperymentów:").pack(side=tk.LEFT)
+        var_exp = tk.StringVar(value="30")
         vcmd = (self.root.register(lambda v: v == "" or v.isdigit()), '%P')
-
-        entry = w98_entry(row, textvariable=var, width=7, validate='key',
+        entry = w98_entry(row1, textvariable=var_exp, width=7, validate='key',
                           validatecommand=vcmd)
         entry.pack(side=tk.LEFT, padx=8)
 
-        lbl_hint = w98_label(cf, "Na gałąź: ~10", fg=W98['disabled'])
-        lbl_hint.pack(anchor=tk.W, pady=(6, 0))
+        lbl_hint = w98_label(row1, "Na gałąź: ~10", fg=W98['disabled'])
+        lbl_hint.pack(side=tk.LEFT, padx=4)
+
+        # 2. PARAMETR: Kryterium podziału
+        row2 = w98_frame(cf)
+        row2.pack(fill=tk.X, pady=(8, 0))
+        w98_label(row2, "Kryterium drzewa:").pack(side=tk.LEFT)
+        var_crit = tk.StringVar(value="gini")
+        cb_crit = ttk.Combobox(row2, textvariable=var_crit,
+                               values=["gini", "entropy"],
+                               state="readonly", width=10)
+        cb_crit.pack(side=tk.LEFT, padx=(22, 8))
+
+        # 3. PARAMETR: Zbiór testowy
+        row3 = w98_frame(cf)
+        row3.pack(fill=tk.X, pady=(8, 0))
+        w98_label(row3, "Rozmiar testowy:").pack(side=tk.LEFT)
+        var_test = tk.StringVar(value="0.3")
+        cb_test = ttk.Combobox(row3, textvariable=var_test,
+                               values=["0.2", "0.3", "0.4"],
+                               state="readonly", width=10)
+        cb_test.pack(side=tk.LEFT, padx=(24, 8))
 
         def update_hint(*_):
             try:
-                lbl_hint.config(text=f"Na gałąź: ~{max(1, int(var.get())//3)}")
+                lbl_hint.config(text=("Na gałąź: ~" +
+                                      f"{max(1, int(var_exp.get())//3)}"))
             except ValueError:
                 lbl_hint.config(text="Na gałąź: —")
 
-        var.trace_add("write", update_hint)
+        var_exp.trace_add("write", update_hint)
 
         w98_separator(cf)
 
         def confirm():
-            raw = var.get().strip()
+            raw = var_exp.get().strip()
             if not raw or not raw.isdigit() or int(raw) < 29:
                 messagebox.showwarning("Błąd",
                                        "Podaj liczbę całkowitą min 30.",
                                        parent=popup)
                 return
             popup.destroy()
-            self.run_experiments(int(raw))
+            self.run_experiments(int(raw), criterion=var_crit.get(),
+                                 test_size=float(var_test.get()))
 
         bf = w98_frame(cf)
         bf.pack(fill=tk.X, pady=(10, 0))
@@ -672,16 +700,23 @@ class MLProjectGUI:
         popup.bind("<Return>", lambda e: confirm())
         popup.bind("<Escape>", lambda e: popup.destroy())
 
-    def run_experiments(self, total=30):
+    def run_experiments(self, total=30, criterion='gini', test_size=0.3):
         n_per_branch = max(1, total // 3)
         actual_total = n_per_branch * 3
 
+        self.last_total_exp = actual_total
+        self.last_criterion = criterion
+        self.last_test_size = test_size
+
         self.all_results = []
         self.results_tree.delete(*self.results_tree.get_children())
-        self.log(f"Start: {actual_total} eksperymentów ({n_per_branch}/gałąź x 3)...")
+        msg = (
+            f"Start: {actual_total} eksperymentów " +
+            f"({n_per_branch}/gałąź x 3). " +
+            f"Kryterium: {criterion}, Test size: {test_size}"
+        )
+        self.log(msg)
         self.set_status(f"Trwa {actual_total} eksperymentów...")
-        self.all_results = []
-        self.results_tree.delete(*self.results_tree.get_children())
 
         y = self.df[self._meta['target']]
 
@@ -694,32 +729,39 @@ class MLProjectGUI:
 
         for branch_name, features in self.branches.items():
             X = self.df[features]
+
             (X_train, X_test,
-             y_train, y_test) = train_test_split(X, y, test_size=0.3,
+             y_train, y_test) = train_test_split(X, y, test_size=test_size,
                                                  random_state=42)
 
             for depth in depths:
                 model = DecisionTreeClassifier(max_depth=int(depth),
+                                               criterion=criterion,
                                                random_state=42)
                 model.fit(X_train, y_train)
                 y_pred = model.predict(X_test)
 
-                acc  = accuracy_score(y_test, y_pred)
+                acc = accuracy_score(y_test, y_pred)
                 prec = precision_score(y_test, y_pred, average='weighted',
                                        zero_division=0)
-                rec  = recall_score(y_test, y_pred, average='weighted',
-                                    zero_division=0)
-                f1   = f1_score(y_test, y_pred, average='weighted',
-                                zero_division=0)
+                rec = recall_score(y_test, y_pred, average='weighted',
+                                   zero_division=0)
+                f1 = f1_score(y_test, y_pred, average='weighted',
+                              zero_division=0)
 
                 result = {'nr': exp_nr, 'branch': branch_name,
                           'depth': int(depth), 'acc': acc, 'prec': prec,
                           'rec': rec, 'f1': f1, 'classes': model.classes_}
                 self.all_results.append(result)
 
-                self.log(f"Exp {exp_nr:>3}/{actual_total} | {branch_name} depth={int(depth):>2} | "
-                         f"Acc={acc*100:.1f}% Prec={prec*100:.1f}% Rec={rec*100:.1f}% F1={f1*100:.1f}%")
-                self.set_status(f"Eksperyment {exp_nr}/{actual_total} — {branch_name}, depth={int(depth)}")
+                msg = (f"Exp {exp_nr:>3}/{actual_total} | {branch_name} " +
+                       f"depth={int(depth):>2} | Acc={acc*100:.1f}% " +
+                       f"Prec={prec*100:.1f}% Rec={rec*100:.1f}% " +
+                       f"F1={f1*100:.1f}%"
+                       )
+                self.log(msg)
+                self.set_status(f"Eksperyment {exp_nr}/{actual_total} " +
+                                f"— {branch_name}, depth={int(depth)}")
 
                 if acc > best_acc:
                     best_acc = acc
@@ -728,7 +770,10 @@ class MLProjectGUI:
 
                 exp_nr += 1
 
-        msg = f"Najlepszy: {best_result['branch']}, depth={best_result['depth']}, Acc={best_result['acc']*100:.2f}%"
+        msg = (f"Najlepszy: {best_result['branch']}, " +
+               f"depth={best_result['depth']}, " +
+               f"Acc={best_result['acc']*100:.2f}%"
+               )
 
         self.log(f"=== ZAKOŃCZONO {actual_total} EKSPERYMENTÓW ===")
         self.log(msg)
@@ -745,7 +790,10 @@ class MLProjectGUI:
         tag_map = {'Gałąź 1': 'branch1', 'Gałąź 2': 'branch2',
                    'Gałąź 3': 'branch3'}
         for r in self.all_results:
-            tag = 'best' if r['nr'] == best_result['nr'] else tag_map.get(r['branch'], 'branch1')
+            if r['nr'] == best_result['nr']:
+                tag = 'best'
+            else:
+                tag_map.get(r['branch'], 'branch1')
             self.results_tree.insert('', tk.END, tags=(tag,), values=(
                 r['nr'], r['branch'], r['depth'],
                 f"{r['acc']*100:.2f}%", f"{r['prec']*100:.2f}%",
@@ -760,8 +808,10 @@ class MLProjectGUI:
         fig.patch.set_facecolor('#c0c0c0')
         gs = gridspec.GridSpec(2, 2, figure=fig, hspace=0.5, wspace=0.35)
 
-        metrics = [('acc','Accuracy'), ('prec','Precision'), ('rec','Recall'), ('f1','F1-Score')]
-        branch_colors = {'Gałąź 1': '#000080', 'Gałąź 2': '#008000', 'Gałąź 3': '#800000'}
+        metrics = [('acc', 'Accuracy'), ('prec', 'Precision'),
+                   ('rec', 'Recall'), ('f1', 'F1-Score')]
+        branch_colors = {'Gałąź 1': '#000080', 'Gałąź 2': '#008000',
+                         'Gałąź 3': '#800000'}
 
         for idx, (mk, mn) in enumerate(metrics):
             ax = fig.add_subplot(gs[idx // 2, idx % 2])
@@ -792,7 +842,8 @@ class MLProjectGUI:
 
     def _update_best_model(self, best, cm):
         self.lbl_best_info.config(
-            text=f"  Najlepszy model: {best['branch']}, max_depth={best['depth']}  ")
+            text=(f"  Najlepszy model: {best['branch']}, " +
+                  f"max_depth={best['depth']}  "))
         self.lbl_acc.config(text=f"  Accuracy:  {best['acc']*100:.2f}%  ")
         self.lbl_prec.config(text=f"  Precision: {best['prec']*100:.2f}%  ")
         self.lbl_rec.config(text=f"  Recall:    {best['rec']*100:.2f}%  ")
@@ -901,6 +952,66 @@ class MLProjectGUI:
         self.auto_obs_text.config(state=tk.DISABLED)
 
         self.notebook.select(5)
+
+    def export_results(self):
+        if not self.all_results:
+            return messagebox.showwarning("Uwaga", "Brak wyników do zapisu!")
+
+        filepath = filedialog.asksaveasfilename(
+            defaultextension=".txt",
+            filetypes=[("Text Files", "*.txt")],
+            title="Zapisz raport z eksperymentów"
+        )
+
+        if not filepath:
+            return
+
+        # najlepszy model
+        best = max(self.all_results, key=lambda r: r['acc'])
+
+        # dpowiedzi użytkownika
+        obs = self.obs_text.get('1.0', tk.END).strip()
+        wn = self.wn_text.get('1.0', tk.END).strip()
+        end = self.end_text.get('1.0', tk.END).strip()
+
+        with open(filepath, 'w', encoding='utf-8') as f:
+            f.write("=" * 30 + "\n")
+            f.write("  RAPORT\n")
+            f.write("=" * 30 + "\n\n")
+
+            f.write("1. DANE\n")
+            f.write("-" * 30 + "\n")
+            f.write(f"Rekordy: {self._meta['rows']}\n")
+            f.write(f"Cechy startowe: {self._meta['features']}\n")
+            f.write(f"Kolumna docelowa (cel): {self._meta['target']}\n\n")
+
+            f.write("2. PARAMETRY/ZMIENNE \n")
+            f.write("-" * 30 + "\n")
+            f.write("Wykonanych eksperymentów: " +
+                    f"{getattr(self, 'last_total_exp', 'Brak')}\n")
+            f.write("Kryterium podziału (criterion): " +
+                    f"{getattr(self, 'last_criterion', 'Brak')}\n")
+            f.write("Rozmiar zbioru testowego (test_size): " +
+                    f"{getattr(self, 'last_test_size', 'Brak')}\n\n")
+
+            f.write("3. WYNIK I OCENA SKUTECZNOŚCI\n")
+            f.write("-" * 30 + "\n")
+            f.write(f"Struktura wejściowa: {best['branch']}\n")
+            f.write(f"Optymalny koszt (max_depth): {best['depth']}\n")
+            f.write(f"Accuracy:  {best['acc']*100:.2f}%\n")
+            f.write(f"Precision: {best['prec']*100:.2f}%\n")
+            f.write(f"Recall:    {best['rec']*100:.2f}%\n")
+            f.write(f"F1-Score:  {best['f1']*100:.2f}%\n\n")
+
+            f.write("4. WŁASNE SPOSTRZEŻENIA I WNIOSKI UŻYTKOWNIKA\n")
+            f.write("-" * 30 + "\n")
+            f.write(f"[Obserwacje]:\n{obs if obs else '---'}\n\n")
+            f.write("[Wnioski na podstawie obserwacji]:\n" +
+                    f"{wn if wn else '---'}\n\n")
+            f.write(f"[Wnioski końcowe]:\n{end if end else '---'}\n")
+
+        self.log(f"Zapisano raport do pliku: {filepath}")
+        self.set_status("Raport został pomyślnie zapisany.")
 
 
 if __name__ == "__main__":
